@@ -1,0 +1,82 @@
+// In middleware/validation.js
+const { body, validationResult } = require('express-validator');
+
+// --- New: Validation rules for user registration ---
+const registerRules = () => {
+  return [
+    body('email')
+      .isEmail()
+      .withMessage('Must be a valid email address'),
+
+    body('username')
+      .isLength({ min: 3 })
+      .withMessage('Username must be at least 3 characters long'),
+
+    body('password')
+      .isLength({ min: 8 })
+      .withMessage('Password must be at least 8 characters long')
+      .matches(/\d/)
+      .withMessage('Password must contain a number'),
+  ];
+};
+
+const loginRules = () => {
+  return [
+    body('email')
+      .isEmail()
+      .withMessage('Must be a valid email address'),
+    
+    body('password')
+      .notEmpty()
+      .withMessage('Password is required'),
+  ];
+};
+
+// --- Existing (Renamed): Validation rules for updating a profile ---
+const updateProfileRules = () => {
+  return [
+    body('username')
+      .optional()
+      .trim()
+      .isLength({ min: 3, max: 30 })
+      .withMessage('Username must be 3-30 characters')
+      .matches(/^[a-zA-Z0-9_]+$/)
+      .withMessage('Username contains invalid characters'),
+
+    body('bio')
+      .optional()
+      .trim()
+      .isLength({ max: 200 })
+      .withMessage('Bio exceeds 200 characters'),
+
+    body('website')
+      .optional()
+      .trim()
+      .isURL()
+      .withMessage('Invalid website URL')
+  ];
+};
+
+
+// --- New: Central middleware to handle all validation errors ---
+const validate = (req, res, next) => {
+  const errors = validationResult(req);
+  if (errors.isEmpty()) {
+    return next(); // No errors, proceed
+  }
+
+  // Format and send back the errors
+  const extractedErrors = [];
+  errors.array().map(err => extractedErrors.push({ [err.path]: err.msg }));
+
+  return res.status(400).json({
+    errors: extractedErrors,
+  });
+};
+
+module.exports = {
+  registerRules,
+  loginRules, // Added export
+  updateProfileRules,
+  validate,
+};

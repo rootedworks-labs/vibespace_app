@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  minio:
+    image: minio/minio
+    container_name: vibespace_minio
+    hostname: minio  # Internal hostname
+    ports:
+      - "9000:9000"  # API port (for your backend)
+      - "9001:9001"  # Web console port
+    volumes:
+      - C:/minio/data:/data  # Persistent storage (adjust path as needed)
+      - C:/minio/config:/root/.minio  # Configuration
+    environment:
+      MINIO_ROOT_USER: corey              # Change these!
+      MINIO_ROOT_PASSWORD: Sandersco8891
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001  # For console
+    command: server /data --console-address ":9001"
+    restart: unless-stopped
+    networks:
+      - vibespace_net
+
+  # Optional: Add a MinIO client for admin tasks
+  minio-client:
+    image: minio/mc
+    container_name: minio_client
+    depends_on:
+      - minio
+    networks:
+      - vibespace_net
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set local http://minio:9000 admin your-strong-password;
+      mc mb local/vibespace-uploads;
+      mc policy set public local/vibespace-uploads;
+      echo 'MinIO ready!';
+      tail -f /dev/null
+      "
+
+networks:
+  vibespace_net:
+    driver: bridge
