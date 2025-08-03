@@ -25,25 +25,34 @@ exports.createPost = async (req, res) => {
 };
 
 /**
- * Retrieves a single post by its ID, including the author's username.
+ * Retrieves a single post by its ID, including the author's username and like count.
  */
 exports.getPostById = async (req, res) => {
   const { postId } = req.params;
+  const { userId } = req; // Can be undefined if user is not logged in
 
   try {
-    const post = await query(
-      `SELECT p.id, p.content, p.media_url, p.is_public, p.created_at, u.username 
-       FROM posts p 
-       JOIN users u ON p.user_id = u.id 
-       WHERE p.id = $1`,
-      [postId]
-    );
+    const postQuery = `
+      SELECT
+        p.id,
+        p.content,
+        p.media_url,
+        p.is_public,
+        p.created_at,
+        u.username,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
+        EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $2) as has_liked
+      FROM posts p
+      JOIN users u ON p.user_id = u.id
+      WHERE p.id = $1`;
 
-    if (post.rows.length === 0) {
+    const { rows } = await query(postQuery, [postId, userId]);
+
+    if (rows.length === 0) {
       return res.status(404).json({ error: 'Post not found.' });
     }
 
-    res.status(200).json(post.rows[0]);
+    res.status(200).json(rows[0]);
   } catch (err) {
     console.error('Get post error:', err);
     res.status(500).json({ error: 'Server error while fetching post.' });
@@ -51,16 +60,22 @@ exports.getPostById = async (req, res) => {
 };
 
 /**
- * Retrieves all posts, including the author's username.
+ * Retrieves all posts, including the author's username and like count.
  */
 exports.getPosts = async (req, res) => {
+  const { userId } = req; // Can be undefined
+
   try {
     const result = await query(`
-      SELECT p.*, u.username 
+      SELECT
+        p.*,
+        u.username,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
+        EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as has_liked
       FROM posts p
       JOIN users u ON p.user_id = u.id
       ORDER BY p.created_at DESC
-    `);
+    `, [userId]);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
