@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const postController = require('../controllers/postController');
+const likeController = require('../controllers/likeController'); // Import the new controller
 const authMiddleware = require('../middleware/auth'); // Import auth middleware for protected routes
 
 // --- Post Routes ---
@@ -30,6 +31,22 @@ router.delete(
   '/:postId',
   authMiddleware.authenticate,
   postController.deletePost
+);
+
+// --- Like Routes ---
+
+// POST (like) a post
+router.post(
+  '/:postId/like',
+  authMiddleware.authenticate,
+  likeController.likePost
+);
+
+// DELETE (unlike) a post
+router.delete(
+  '/:postId/like',
+  authMiddleware.authenticate,
+  likeController.unlikePost
 );
 
 module.exports = router;
