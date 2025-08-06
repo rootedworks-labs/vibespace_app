@@ -133,3 +133,38 @@ exports.deletePost = async (req, res) => {
     res.status(500).json({ error: 'Server error.' });
   }
 };
+
+/**
+ * Retrieves the activity feed for the authenticated user.
+ */
+exports.getFeed = async (req, res) => {
+    const { userId } = req;
+
+    try {
+      const feedQuery = `
+        SELECT
+          p.id,
+          p.content,
+          p.media_url,
+          p.created_at,
+          u.username,
+          u.profile_picture_url,
+          (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
+          EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as has_liked
+        FROM posts p
+        JOIN users u ON p.user_id = u.id
+        WHERE 
+          -- The post is from a user they follow
+          p.user_id IN (SELECT followee_id FROM follows WHERE follower_id = $1)
+          -- OR the post is their own
+          OR p.user_id = $1
+        ORDER BY p.created_at DESC;
+      `;
+
+      const { rows } = await query(feedQuery, [userId]);
+      res.status(200).json(rows);
+    } catch (err) {
+      console.error('Get feed error:', err);
+      res.status(500).json({ error: 'Server error while fetching feed.' });
+    }
+  };
