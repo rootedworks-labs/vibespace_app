@@ -20,6 +20,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/posts', require('./routes/posts'));
 app.use('/api/consents', require('./routes/consents'));
 app.use('/api/uploads', require('./routes/uploads'));
+app.use('/api/feed', require('./routes/feed'));
 
 
 const PORT = process.env.PORT || 5000;
