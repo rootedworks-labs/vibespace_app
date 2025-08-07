@@ -1,5 +1,5 @@
 // In middleware/validation.js
-const { body, validationResult } = require('express-validator');
+const { body, param, validationResult } = require('express-validator');
 
 // --- New: Validation rules for user registration ---
 const registerRules = () => {
@@ -25,7 +25,7 @@ const loginRules = () => {
     body('email')
       .isEmail()
       .withMessage('Must be a valid email address'),
-    
+
     body('password')
       .notEmpty()
       .withMessage('Password is required'),
@@ -57,6 +57,55 @@ const updateProfileRules = () => {
   ];
 };
 
+// --- New: Rules for Creating a Post ---
+const createPostRules = () => {
+    return [
+        body('content')
+            .trim()
+            .notEmpty()
+            .withMessage('Post content cannot be empty.')
+            .isLength({ max: 1000 })
+            .withMessage('Post content cannot exceed 1000 characters.'),
+        body('is_public')
+            .optional()
+            .isBoolean()
+            .withMessage('is_public must be a boolean value (true or false).')
+    ];
+};
+
+// --- New: Rules for Granting Consent ---
+const grantConsentRules = () => {
+    return [
+        body('consent_type')
+            .trim()
+            .notEmpty()
+            .withMessage('consent_type is required.')
+            .isString()
+            .withMessage('consent_type must be a string.')
+    ];
+};
+
+// --- New: Reusable rule for validating a post ID in the URL ---
+const postIdRule = () => {
+    return [
+        param('postId')
+            .isInt({ min: 1 })
+            .withMessage('Post ID must be a positive integer.')
+    ];
+};
+
+// --- New: Reusable rule for validating a username in the URL ---
+const usernameRule = () => {
+    return [
+        param('username')
+            .trim()
+            .notEmpty()
+            .withMessage('Username cannot be empty.')
+            .isLength({ min: 3, max: 30 })
+            .withMessage('Username must be 3-30 characters.')
+    ];
+};
+
 
 // --- New: Central middleware to handle all validation errors ---
 const validate = (req, res, next) => {
@@ -78,5 +127,9 @@ module.exports = {
   registerRules,
   loginRules, // Added export
   updateProfileRules,
+  createPostRules,
+  grantConsentRules,
+  postIdRule,
+  usernameRule,
   validate,
 };
