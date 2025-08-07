@@ -4,18 +4,21 @@ const router = express.Router();
 const postController = require('../controllers/postController');
 const likeController = require('../controllers/likeController'); // Import the new controller
 const authMiddleware = require('../middleware/auth'); // Import auth middleware for protected routes
+const { createPostRules, postIdRule, validate } = require('../middleware/validation');
 
 // --- Post Routes ---
 
 // GET all posts (public)
 router.get(
-    '/', 
+    '/',
     postController.getPosts
 );
 
 // GET a single post by its ID (public)
 router.get(
   '/:postId',
+  postIdRule(),
+  validate,
   postController.getPostById
 );
 
@@ -23,6 +26,8 @@ router.get(
 router.post(
   '/',
   authMiddleware.authenticate,
+  createPostRules(),
+  validate,
   postController.createPost
 );
 
@@ -30,6 +35,8 @@ router.post(
 router.delete(
   '/:postId',
   authMiddleware.authenticate,
+  postIdRule(),
+  validate,
   postController.deletePost
 );
 
@@ -39,6 +46,8 @@ router.delete(
 router.post(
   '/:postId/like',
   authMiddleware.authenticate,
+  postIdRule(),
+  validate,
   likeController.likePost
 );
 
@@ -46,6 +55,8 @@ router.post(
 router.delete(
   '/:postId/like',
   authMiddleware.authenticate,
+  postIdRule(),
+  validate,
   likeController.unlikePost
 );
 
