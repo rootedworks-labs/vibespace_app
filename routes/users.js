@@ -5,6 +5,7 @@ const multer = require('multer');
 const userController = require('../controllers/userController');
 const followController = require('../controllers/followController'); // Added: Import the new controller
 const authMiddleware = require('../middleware/auth');
+const { usernameRule, updateProfileRules, validate } = require('../middleware/validation');
 
 // --- Multer Configuration for Avatar Uploads ---
 const avatarUpload = multer({
@@ -38,6 +39,8 @@ router.delete(
 router.patch(
   '/me',
   authMiddleware.authenticate,
+  updateProfileRules(),
+  validate,
   userController.updateProfile
 );
 
@@ -46,12 +49,16 @@ router.patch(
 router.post(
   '/:username/follow',
   authMiddleware.authenticate,
+  usernameRule(),
+  validate,
   followController.followUser
 );
 
 router.delete(
   '/:username/follow',
   authMiddleware.authenticate,
+  usernameRule(),
+  validate,
   followController.unfollowUser
 );
 
