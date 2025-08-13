@@ -1,22 +1,44 @@
 const { query } = require('../db');
+const sharp = require('sharp');
+const { uploadFileToMinIO } = require('../services/fileStorage');
 
 /**
- * Creates a new post for the authenticated user.
+ * Creates a new post for the authenticated user, with an optional image.
  */
 exports.createPost = async (req, res) => {
   const { userId } = req;
-  // We can accept is_public from the request body, defaulting to true if not provided.
+  // Content now comes from the multipart form body
   const { content, is_public = true } = req.body;
+  const file = req.file;
 
-  if (!content || content.trim() === '') {
-    return res.status(400).json({ error: 'Post content cannot be empty.' });
+  if (!content && !file) {
+    return res.status(400).json({ error: 'Post must have content or an image.' });
   }
 
+  let mediaUrl = null;
+
   try {
+    // If a file is uploaded, process and upload it
+    if (file) {
+      // Process the image with Sharp for optimization
+      const processedImageBuffer = await sharp(file.buffer)
+        .resize(1080, 1080, { fit: 'inside', withoutEnlargement: true }) // Resize for social media
+        .webp({ quality: 80 }) // Convert to efficient WebP format
+        .toBuffer();
+
+      // Define a unique key for the file in MinIO/S3
+      const key = `posts/user-${userId}-${Date.now()}.webp`;
+
+      // Upload the processed image using your existing service
+      mediaUrl = await uploadFileToMinIO(key, processedImageBuffer, 'image/webp');
+    }
+
+    // Insert the new post into the database
     const newPost = await query(
-      'INSERT INTO posts (user_id, content, is_public) VALUES ($1, $2, $3) RETURNING *',
-      [userId, content, is_public]
+      'INSERT INTO posts (user_id, content, is_public, media_url) VALUES ($1, $2, $3, $4) RETURNING *',
+      [userId, content || '', is_public, mediaUrl]
     );
+    
     res.status(201).json(newPost.rows[0]);
   } catch (err) {
     console.error('Create post error:', err);

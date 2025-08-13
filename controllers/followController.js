@@ -1,4 +1,5 @@
 const { query } = require('../db');
+const { createNotification } = require('../services/notificationService');
 
 exports.followUser = async (req, res) => {
   const followerId = req.userId; // The current logged-in user
@@ -23,6 +24,10 @@ exports.followUser = async (req, res) => {
       [followerId, followeeId]
     );
 
+    // --- Create Notification ---
+    // Note: No entityId is needed for a follow notification
+    await createNotification(followeeId, followerId, 'follow');
+    
     res.status(201).json({ message: `You are now following ${username}.` });
   } catch (err) {
     console.error('Follow user error:', err);

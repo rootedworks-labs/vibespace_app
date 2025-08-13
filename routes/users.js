@@ -5,7 +5,7 @@ const multer = require('multer');
 const userController = require('../controllers/userController');
 const followController = require('../controllers/followController'); // Added: Import the new controller
 const authMiddleware = require('../middleware/auth');
-const { usernameRule, updateProfileRules, validate } = require('../middleware/validation');
+const { usernameRule, updateProfileRules, searchUsersRules, validate } = require('../middleware/validation');
 
 // --- Multer Configuration for Avatar Uploads ---
 const avatarUpload = multer({
@@ -20,8 +20,25 @@ const avatarUpload = multer({
   },
 });
 
+// --- New User Search Route ---
+// Placed before dynamic routes to avoid conflicts
+router.get(
+  '/search',
+  authMiddleware.authenticate,
+  searchUsersRules(),
+  validate,
+  userController.searchUsers
+);
+
 // --- Routes for the Current User (/me) ---
 router.get('/me', authMiddleware.authenticate, userController.getCurrentUser);
+
+// --- New: Route to export user data ---
+router.get(
+  '/me/data',
+  authMiddleware.authenticate,
+  userController.exportUserData
+);
 
 router.post(
   '/me/avatar',

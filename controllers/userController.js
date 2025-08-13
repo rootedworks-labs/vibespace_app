@@ -3,6 +3,8 @@ const { query } = require('../db');
 const { uploadFileToMinIO, deleteFileFromMinIO } = require('../services/fileStorage');
 const { handleUserDeletion } = require('../services/deletionService'); // Added
 const sanitizeHtml = require('sanitize-html');
+const validator = require('validator');
+
 
 exports.uploadAvatar = async (req, res) => {
   const { userId } = req;
@@ -104,7 +106,7 @@ exports.updateProfile = async (req, res) => {
   try {
     // 1. Sanitize user input to prevent XSS attacks
     const sanitizedBio = bio ? sanitizeHtml(bio, { allowedTags: [], allowedAttributes: {} }) : undefined;
-    const normalizedWebsite = website ? validator.normalizeUrl(website) : undefined;
+    const normalizedWebsite = website ? validator.normalizeURL(website) : undefined;
 
     // 2. Validate username uniqueness if it's being changed
     if (username) {
@@ -136,5 +138,69 @@ exports.updateProfile = async (req, res) => {
   } catch (err) {
     console.error('Profile update failed:', err);
     res.status(500).json({ error: 'Server error while updating profile.' });
+  }
+};
+
+/**
+ * Searches for users by username.
+ */
+exports.searchUsers = async (req, res) => {
+  const { q } = req.query;
+
+  try {
+    // Use ILIKE for case-insensitive partial matching
+    const { rows } = await query(
+      "SELECT id, username, profile_picture_url FROM users WHERE username ILIKE $1 ORDER BY username",
+      [`%${q}%`]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error('Failed to search for users:', err);
+    res.status(500).json({ error: 'Server error during user search.' });
+  }
+};
+
+exports.exportUserData = async (req, res) => {
+  const { userId } = req;
+
+  try {
+    // Use Promise.all to run queries concurrently for better performance
+    const [
+      profileRes,
+      postsRes,
+      commentsRes,
+      likesRes,
+      followingRes,
+      followersRes,
+      consentsRes
+    ] = await Promise.all([
+      query('SELECT id, username, email, created_at, profile_picture_url, bio, website FROM users WHERE id = $1', [userId]),
+      query('SELECT id, content, is_public, created_at, media_url FROM posts WHERE user_id = $1', [userId]),
+      query('SELECT id, post_id, content, created_at FROM comments WHERE user_id = $1', [userId]),
+      query('SELECT post_id, created_at FROM likes WHERE user_id = $1', [userId]),
+      query('SELECT followee_id FROM follows WHERE follower_id = $1', [userId]),
+      query('SELECT follower_id FROM follows WHERE followee_id = $1', [userId]),
+      query('SELECT consent_type, granted_at, ip_address, user_agent FROM user_consents WHERE user_id = $1', [userId])
+    ]);
+
+    // Structure the data into a clean JSON object
+    const userData = {
+      profile: profileRes.rows[0] || null,
+      posts: postsRes.rows,
+      comments: commentsRes.rows,
+      likes: likesRes.rows,
+      following: followingRes.rows.map(r => r.followee_id),
+      followers: followersRes.rows.map(r => r.follower_id),
+      consents: consentsRes.rows,
+    };
+
+    // Set headers to suggest downloading the file
+    res.setHeader('Content-Disposition', 'attachment; filename="vibespace_data.json"');
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).json(userData);
+
+  } catch (err) {
+    console.error(`Failed to export data for user ${userId}:`, err);
+    res.status(500).json({ error: 'Failed to export user data.' });
   }
 };

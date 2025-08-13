@@ -1,5 +1,5 @@
 // In middleware/validation.js
-const { body, param, validationResult } = require('express-validator');
+const { body, param, query, validationResult } = require('express-validator');
 
 // --- New: Validation rules for user registration ---
 const registerRules = () => {
@@ -106,6 +106,78 @@ const usernameRule = () => {
     ];
 };
 
+const createCommentRules = () => {
+    return [
+        body('content')
+            .trim()
+            .notEmpty()
+            .withMessage('Comment content cannot be empty.')
+            .isLength({ max: 500 })
+            .withMessage('Comment cannot exceed 500 characters.')
+    ];
+};
+
+// --- New: Reusable rule for validating a comment ID in the URL ---
+const commentIdRule = () => {
+    return [
+        param('commentId')
+            .isInt({ min: 1 })
+            .withMessage('Comment ID must be a positive integer.')
+    ];
+};
+
+// --- New: Rules for User Search ---
+const searchUsersRules = () => {
+    return [
+        query('q')
+            .trim()
+            .notEmpty()
+            .withMessage('Search query "q" is required.')
+            .isLength({ min: 1, max: 50 })
+            .withMessage('Search query must be between 1 and 50 characters.')
+    ];
+};
+
+// --- New: Rules for creating a conversation ---
+const createConversationRules = () => {
+    return [
+        body('recipientId')
+            .isInt({ min: 1 })
+            .withMessage('Recipient ID must be a positive integer.')
+    ];
+};
+
+// --- New: Rules for sending a message ---
+const sendMessageRules = () => {
+    return [
+        body('content')
+            .trim()
+            .notEmpty()
+            .withMessage('Message content cannot be empty.')
+            .isLength({ max: 2000 })
+            .withMessage('Message cannot exceed 2000 characters.')
+    ];
+};
+
+// --- New: Reusable rule for validating a conversation ID in the URL ---
+const conversationIdRule = () => {
+    return [
+        param('conversationId')
+            .isInt({ min: 1 })
+            .withMessage('Conversation ID must be a positive integer.')
+    ];
+};
+
+// --- New: Rules for waitlist signup ---
+const waitlistRules = () => {
+    return [
+        body('email')
+            .isEmail()
+            .withMessage('Must be a valid email address.')
+            .normalizeEmail()
+    ];
+};
+
 
 // --- New: Central middleware to handle all validation errors ---
 const validate = (req, res, next) => {
@@ -123,6 +195,24 @@ const validate = (req, res, next) => {
   });
 };
 
+const createReportRules = () => {
+    return [
+        body('reported_content_type')
+            .isIn(['post', 'comment', 'user'])
+            .withMessage('Content type must be post, comment, or user.'),
+        body('reported_id')
+            .isInt({ min: 1 })
+            .withMessage('Reported ID must be a positive integer.'),
+        body('reason')
+            .trim()
+            .notEmpty()
+            .withMessage('A reason for the report is required.')
+            .isLength({ max: 500 })
+            .withMessage('Reason cannot exceed 500 characters.')
+    ];
+};
+
+
 module.exports = {
   registerRules,
   loginRules, // Added export
@@ -132,4 +222,12 @@ module.exports = {
   postIdRule,
   usernameRule,
   validate,
+  createCommentRules,
+  commentIdRule,
+  searchUsersRules, // Added export
+  createConversationRules,
+  sendMessageRules,
+  conversationIdRule,
+  waitlistRules,
+  createReportRules,
 };
