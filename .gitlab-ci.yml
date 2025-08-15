@@ -22,7 +22,7 @@ deploy_production:
   # This is the actual deployment script
   script:
     # Connect to the server and run the deployment commands
-    - ssh ${SSH_USER}@${SSH_SERVER_IP} "cd ~/vibespace && git pull origin main && npm install && npm run migrate && pm2 reload vibespace-api"
+    - ssh -v ${SSH_USER}@${SSH_SERVER_IP} "cd ~/vibespace && git pull origin main && npm install && npm run migrate && pm2 reload vibespace-api"
   
   # This ensures the job only runs when you push to the 'main' branch
   only:
