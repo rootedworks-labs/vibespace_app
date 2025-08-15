@@ -3,6 +3,10 @@ stages:
 
 deploy_production:
   stage: deploy
+  tags:
+    - shell
+    - deploy
+    - production
   # This section prepares the runner for SSH connection
   before_script:
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
