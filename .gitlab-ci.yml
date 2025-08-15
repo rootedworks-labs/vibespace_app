@@ -1,0 +1,25 @@
+stages:
+  - deploy
+
+deploy_production:
+  stage: deploy
+  # This section prepares the runner for SSH connection
+  before_script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+    - eval $(ssh-agent -s)
+    # Add the private key from GitLab's CI/CD variables
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    # Add the server's host key to avoid interactive prompts
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
+  
+  # This is the actual deployment script
+  script:
+    # Connect to the server and run the deployment commands
+    - ssh ${SSH_USER}@${SSH_SERVER_IP} "cd ~/vibespace && git pull origin main && npm install && npm run migrate && pm2 reload vibespace-api"
+  
+  # This ensures the job only runs when you push to the 'main' branch
+  only:
+    - main
