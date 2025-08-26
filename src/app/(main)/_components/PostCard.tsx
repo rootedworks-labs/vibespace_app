@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '@/src/app/components/ui/Card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/src/app/components/ui/DropdownMenu';
 import { Heart, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
+import Link from 'next/link';
 
 // Define the shape of a post object based on your API
 interface Post {
@@ -104,15 +105,20 @@ export function PostCard({ post }: { post: Post }) {
           )}
         </div>
       </CardHeader>
+      <Link href={`/posts/${post.id}`} className="cursor-pointer">
       <CardContent className="p-4 pt-0">
         <p className="text-foreground/90">{post.content}</p>
-        <div className="flex items-center mt-4">
+      </CardContent>
+      </Link>
+        <div className="p-4 pt-0">
+        <div className="flex items-center">
           <Button variant="ghost" size="sm" onClick={handleLikeToggle} className="flex items-center gap-2 text-neutral-500 hover:text-red-500">
             <Heart className={`h-4 w-4 ${post.has_liked ? 'fill-red-500 text-red-500' : ''}`} />
             {post.like_count}
           </Button>
+          {/* Other buttons like comments go here */}
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }

@@ -3,12 +3,12 @@ import { PostFeed } from './_components/PostFeed';
 import { Sidebar } from '@/src/app/components/Sidebar';
 import { Widgets } from '@/src/app/components/Widgets';
 import { Navbar } from '@/src/app/components/Navbar';
-import VibeSpaceUIAlternatives from "@/src/app/components/VibeSpaceUIAlternatives"
-import VibeMoodboardPrototypeUI from "@/src/app/components/VibeMoodboardPrototypUI"
-import VibeRadialPrototype from "@/src/app/components/VibeRadialPrototype"
-import VibeTimeWindowedPrototype from '../components/VibeTimePrototype';
-import VibePeopleFirstPrototype from '@/src/app/components/VibePeopleFirstPrototype';
-import  { AnimatedEnergyBar, DemoEnergyBarStory }  from '@/src/app/components/AnimatedEnergyBar';
+import VibeSpaceUIAlternatives from "@/src/app/prototypes/_components/VibeSpaceUIAlternatives"
+import VibeMoodboardPrototypeUI from "@/src/app/prototypes/_components/VibeMoodboardPrototypUI"
+import VibeRadialPrototype from "@/src/app/prototypes/_components/VibeRadialPrototype"
+import VibeTimeWindowedPrototype from '../prototypes/_components/VibeTimePrototype';
+import VibePeopleFirstPrototype from '@/src/app/prototypes/_components/VibePeopleFirstPrototype';
+import  { AnimatedEnergyBar, DemoEnergyBarStory }  from '@/src/app/prototypes/_components/AnimatedEnergyBar';
 
 // from '../components/VibeRadialPrototype';
 

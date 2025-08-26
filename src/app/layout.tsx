@@ -2,6 +2,7 @@
 
 import { Inter, Mulish } from 'next/font/google';
 import './globals.css';
+import { Toaster } from 'react-hot-toast';
 
 // Configure the fonts with the desired weights and subsets
 const inter = Inter({
@@ -25,7 +26,11 @@ export default function RootLayout({
   return (
     // Combine the font variable class names on the <html> tag
     <html lang="en" className={`${inter.variable} ${mulish.variable}`}>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Toaster />
+      </body>
+      
     </html>
   );
 }

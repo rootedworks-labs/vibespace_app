@@ -7,6 +7,7 @@ import { Button } from '@/src/app/components/ui/Button';
 import { Textarea } from '@/src/app/components/ui/TextArea'; // We'll create this next
 import { useAuthStore } from '@/src/app/store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/app/components/ui/Avatar';
+import toast from 'react-hot-toast';
 
 export function CreatePostForm() {
   const [content, setContent] = useState('');
@@ -17,14 +18,23 @@ export function CreatePostForm() {
     e.preventDefault();
     if (!content.trim()) return;
 
+    // Show a loading toast
+    const toastId = toast.loading('Creating post...');
+
     try {
       // Your backend expects { content, is_public }
       await api.post('/posts', { content });
       setContent(''); // Clear the textarea
       // Tell SWR to re-fetch the posts feed so the new post appears
       mutate('/posts');
+
+      // Show a success toast
+      toast.success('Post created successfully!', { id: toastId });
+
     } catch (error) {
       console.error('Failed to create post:', error);
+      // Show an error toast
+      toast.error('Failed to create post.', { id: toastId });
     }
   };
 

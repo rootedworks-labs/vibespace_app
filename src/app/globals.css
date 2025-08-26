@@ -12,4 +12,51 @@
   --color-accent: #3e2c24;
   --color-background: #f7f7f7;
   --color-foreground: #333333;
+
+  --color-brand-terracotta: #E2A08A;
+  --color-brand-sage: #A3B8A1;
+  --color-brand-sand: #F0EAD6;
+  --color-brand-deep-blue: #3A4F6B;
+  
+  
+
+  --color-vibe-flow: #14b8a6;  /* Yellow */
+  --color-vibe-joy: #fbbf24;    /* Blue */
+  --color-vibe-hype: #EF4444;    /* Red */
+  --color-vibe-warmth: #fb923c;   /* Purple */
+  --color-vibe-glow: #38b2f6;     /* Pink */
+  --color-vibe-reflect: #6366f1;  /* Indigo */
+  --color-vibe-love: #f472b6
+
+  --color-aura-fire-start: #F87171; /* red-400 */
+  --color-aura-fire-end: #FBBF24;   /* amber-300 */
+  --color-aura-flow-start: #60A5FA; /* blue-400 */
+  --color-aura-flow-end: #93C5FD;   /* blue-300 */
+  --color-aura-magic-start: #A78BFA;/* violet-400 */
+  --color-aura-magic-end: #C4B5FD; /* violet-300 */
+}
+
+@keyframes flow {
+  0% {
+    transform: translateX(0) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100vw) scale(1); /* Animate across the full viewport width */
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-aura {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.05);
+  }
 }

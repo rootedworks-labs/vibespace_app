@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-
+import { persist, createJSONStorage } from 'zustand/middleware';
 // Define the shape of the user object, including the new optional property
 interface User {
   id: number;
@@ -14,9 +14,18 @@ interface AuthState {
   logout: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create(
+  persist<AuthState>(
+  (set) => ({
   accessToken: null,
   user: null,
   login: (accessToken, user) => set({ accessToken, user }),
   logout: () => set({ accessToken: null, user: null }),
-}));
+  }),
+  {
+    name: 'vibespace-auth-storage',
+    storage: createJSONStorage(() => localStorage),
+  }
+  )
+  
+  );

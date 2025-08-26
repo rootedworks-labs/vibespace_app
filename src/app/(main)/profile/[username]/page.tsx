@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import api from '@/src/app/api';
 import { ProfileHeader } from './_components/ProfileHeader';
 import { Spinner } from '@/src/app/components/ui/Spinner';
+import { UserPostFeed } from './_components/UserPostFeed';
 
 const fetcher = (url: string) => api.get(url).then((res) => res.data);
 
@@ -34,7 +35,9 @@ export default function ProfilePage() {
       <div className="h-48 bg-neutral-200" /> 
       <div className="container mx-auto -mt-16 relative z-10">
         <ProfileHeader user={user} />
-        {/* The user's posts would be rendered here */}
+        <div className="mt-4">
+          <UserPostFeed username={user.username} />
+        </div>
       </div>
     </div>
   );
