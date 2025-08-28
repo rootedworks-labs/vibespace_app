@@ -19,7 +19,7 @@ type Story = StoryObj<typeof VibeCard>;
 export const MorningVibe: Story = {
   args: {
     author: 'Corey',
-    text: 'I see no changes, wake up in the morning and I ask myself.',
+    text: 'Y\'all are witnessing elegance in the form of a black elephant.',
     timeWindow: 'Morning',
     vibeCounts: { flow: 10, joy: 5 },
   },
@@ -38,7 +38,7 @@ export const MorningVibeWithImage: Story = {
 export const MorningVibeWithImageAndText: Story = {
 args: {
     author: 'Alex',
-    text: 'A little burst of energy to get through the morning!',
+    text: 'I\'m out for presidents to represent me.',
     mediaUrl: 'https://placehold.co/600x400/e2a08a/3A4F6B?text=VibeSpace',
     mediaType: 'image',
     timeWindow: 'Morning',
@@ -61,7 +61,7 @@ export const MorningVibeWithVideo: Story = {
 export const AfternoonVibe: Story = {
   args: {
     author: 'Jane',
-    text: 'Hope a garden grows where we danced this afternoon',
+    text: 'I need a hundred round drum for the bullshit.',
     timeWindow: 'Afternoon',
     vibeCounts: { flow: 10, hype: 5 },
   },

@@ -31,11 +31,11 @@ interface MockPost {
 
 // Apply the MockPost[] type to your mock data array
 const mockPosts: MockPost[] = [
-  { id: 1, author: 'Alex', content: 'Good morning! Starting the day with some fresh coffee.', timeWindow: 'Morning', vibeCounts: { flow: 8, joy: 5 } },
-  { id: 2, author: 'Brenda', content: 'Woke up in the morning to The Great Gatsby', timeWindow: 'Morning', vibeCounts: { love: 15 } },
-  { id: 3, author: 'Chris', content: 'It\'s an all nighter, go pack a lunch, yeah', timeWindow: 'Afternoon', vibeCounts: { joy: 22, glam: 4 } },
-  { id: 4, author: 'Dana', content: 'Feeling that afternoon slump, but pushing through.', timeWindow: 'Afternoon', vibeCounts: { hype: 7 } },
-  { id: 5, author: 'Eli', content: 'Watching the sunset. So peaceful.', timeWindow: 'Evening', vibeCounts: { flow: 30, joy: 12 } },
+  { id: 1, author: 'Alex', content: 'First thing in the morning, I gotta get it, I\'m on it.', timeWindow: 'Morning', vibeCounts: { flow: 8, joy: 5 } },
+  { id: 2, author: 'Brenda', content: 'Woke up this morning to a message from the mayor.', timeWindow: 'Morning', vibeCounts: { love: 15 } },
+  { id: 3, author: 'Chris', content: '', timeWindow: 'Afternoon', vibeCounts: { joy: 22, glam: 4 } },
+  { id: 4, author: 'Dana', content: 'You are now rocking with the best.', timeWindow: 'Afternoon', vibeCounts: { hype: 7 } },
+  { id: 5, author: 'Eli', content: 'It\'s an all nighter, go pack a lunch, yeah', timeWindow: 'Evening', vibeCounts: { flow: 30, joy: 12 } },
 ];
 
 export function TimeWindowedFeed() {
