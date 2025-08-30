@@ -190,3 +190,27 @@ exports.getFeed = async (req, res) => {
       res.status(500).json({ error: 'Server error while fetching feed.' });
     }
   };
+
+  exports.getPostsByUsername = async (req, res) => {
+  const { username } = req.params;
+  const currentUserId = req.userId || null; // For checking 'has_liked' status
+
+  try {
+    const result = await query(`
+      SELECT
+        p.*,
+        u.username,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
+        EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $2) as has_liked
+      FROM posts p
+      JOIN users u ON p.user_id = u.id
+      WHERE u.username = $1
+      ORDER BY p.created_at DESC
+    `, [username, currentUserId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(`Failed to get posts for user ${username}:`, err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};

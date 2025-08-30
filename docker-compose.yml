@@ -31,9 +31,9 @@ services:
     entrypoint: >
       /bin/sh -c "
       sleep 5;
-      mc alias set local http://minio:9000 admin your-strong-password;
+      mc alias set local http://minio:9000 corey Sandersco8891;
       mc mb local/vibespace-uploads;
-      mc policy set public local/vibespace-uploads;
+      mc anonymous set public local/vibespace-uploads;
       echo 'MinIO ready!';
       tail -f /dev/null
       "

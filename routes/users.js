@@ -4,6 +4,7 @@ const router = express.Router();
 const multer = require('multer');
 const userController = require('../controllers/userController');
 const followController = require('../controllers/followController'); // Added: Import the new controller
+const postController = require('../controllers/postController'); // Added: Import the new controller
 const authMiddleware = require('../middleware/auth');
 const { usernameRule, updateProfileRules, searchUsersRules, validate } = require('../middleware/validation');
 
@@ -78,6 +79,16 @@ router.delete(
   validate,
   followController.unfollowUser
 );
+
+// GET a user's public profile by their username
+router.get('/:username', userController.getUserByUsername);
+
+// GET all posts by a specific user
+router.get('/:username/posts', postController.getPostsByUsername);
+
+// --- Routes for the Current User (/me) ---
+router.get('/me', authMiddleware.authenticate, userController.getCurrentUser);
+
 
 
 // TODO: This route is causing a crash because `userController.getUsers` is not a function.

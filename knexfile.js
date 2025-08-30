@@ -1,4 +1,6 @@
 // knexfile.js
+require('dotenv').config();
+
 module.exports = {
   development: {
     client: 'pg',  // Uses your existing 'pg' module

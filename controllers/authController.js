@@ -57,7 +57,8 @@ exports.registerUser = async (req, res) => {
       refreshToken,
       user: {
         id: newUser.rows[0].id,
-        username: newUser.rows[0].username
+        username: newUser.rows[0].username,
+        profile_picture_url: newUser.rows[0].profile_picture_url
       }
     });
   } catch (err) {
@@ -73,7 +74,7 @@ exports.login = async (req, res) => {
   try {
     // 1. Find user by email
     const { rows } = await query(
-      'SELECT id, password_hash FROM users WHERE email = $1',
+      'SELECT id, password_hash, username, profile_picture_url FROM users WHERE email = $1',
       [email]
     );
 
@@ -100,7 +101,9 @@ exports.login = async (req, res) => {
       accessToken,
       refreshToken,
       user: {
-        id: rows[0].id
+        id: rows[0].id,
+        username: rows[0].username,
+        profile_picture_url: rows[0].profile_picture_url
       }
     });
   } catch (err) {
