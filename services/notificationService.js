@@ -14,11 +14,34 @@ exports.createNotification = async (recipientId, senderId, type, entityId = null
   }
 
   try {
-    await query(
-      'INSERT INTO notifications (recipient_id, sender_id, type, entity_id) VALUES ($1, $2, $3, $4)',
+    const result = await query(
+      'INSERT INTO notifications (recipient_id, sender_id, type, entity_id) VALUES ($1, $2, $3, $4) RETURNING *',
       [recipientId, senderId, type, entityId]
     );
+    const newNotification = result.rows[0];
     console.log(`--- NOTIFICATION CREATED: [${type}] for user ${recipientId} from user ${senderId} ---`);
+
+    // --- Real-time Push via WebSocket ---
+    // Fetch sender's info to create a rich payload for the real-time message
+    const senderResult = await query(
+        'SELECT username, profile_picture_url FROM users WHERE id = $1',
+        [senderId]
+    );
+    const sender = senderResult.rows[0];
+
+    // Construct the payload
+    const notificationPayload = {
+      ...newNotification,
+      sender_username: sender.username,
+      sender_avatar: sender.profile_picture_url,
+    };
+    
+    // Send the notification to the user if they are online
+    sendMessageToUser(recipientId, {
+      type: 'new_notification',
+      payload: notificationPayload,
+    });
+
   } catch (err) {
     console.error('Failed to create notification:', err);
   }

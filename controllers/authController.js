@@ -74,7 +74,7 @@ exports.login = async (req, res) => {
   try {
     // 1. Find user by email
     const { rows } = await query(
-      'SELECT id, password_hash, username, profile_picture_url FROM users WHERE email = $1',
+      'SELECT id, password_hash, username, profile_picture_url, suspended_until FROM users WHERE email = $1',
       [email]
     );
 
@@ -82,28 +82,34 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // 2. Verify password
-    const isValid = await bcrypt.compare(password, rows[0].password_hash);
+    // 2. Check for suspension before verifying password
+    const user = rows[0];
+    if (user.suspended_until && new Date(user.suspended_until) > new Date()) {
+        return res.status(403).json({ error: 'Forbidden: This account is suspended.' });
+    }
+
+    // 3. Verify password
+    const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // 3. Generate new tokens
-    const { accessToken, refreshToken } = generateTokens(rows[0].id);
+    // 4. Generate new tokens
+    const { accessToken, refreshToken } = generateTokens(user.id);
 
-    // 4. Update refresh token in DB
+    // 5. Update refresh token in DB
     await query(
       'UPDATE users SET refresh_token = $1 WHERE id = $2',
-      [refreshToken, rows[0].id]
+      [refreshToken, user.id]
     );
 
     res.json({ 
       accessToken,
       refreshToken,
       user: {
-        id: rows[0].id,
-        username: rows[0].username,
-        profile_picture_url: rows[0].profile_picture_url
+        id: user.id,
+        username: user.username,
+        profile_picture_url: user.profile_picture_url
       }
     });
   } catch (err) {

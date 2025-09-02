@@ -40,14 +40,28 @@ exports.createComment = async (req, res) => {
 };
 
 /**
- * Retrieves all comments for a specific post.
+ * Retrieves all comments for a specific post, including vibe counts.
  */
 exports.getCommentsForPost = async (req, res) => {
   const { postId } = req.params;
 
   try {
     const comments = await query(
-      `SELECT c.id, c.content, c.created_at, u.username, u.profile_picture_url
+      `SELECT 
+         c.id, 
+         c.content, 
+         c.created_at, 
+         u.username, 
+         u.profile_picture_url,
+         (
+           SELECT COALESCE(json_object_agg(cv.vibe_type, cv.count), '{}'::json)
+           FROM (
+             SELECT vibe_type, COUNT(*) as count
+             FROM comment_vibes
+             WHERE comment_id = c.id
+             GROUP BY vibe_type
+           ) cv
+         ) as vibe_counts
        FROM comments c
        JOIN users u ON c.user_id = u.id
        WHERE c.post_id = $1
@@ -83,5 +97,69 @@ exports.deleteComment = async (req, res) => {
   } catch (err) {
     console.error('Delete comment error:', err);
     res.status(500).json({ error: 'Server error while deleting comment.' });
+  }
+};
+
+/**
+ * Adds or updates a vibe on a comment.
+ */
+exports.addVibeToComment = async (req, res) => {
+  const { userId } = req;
+  const { commentId } = req.params;
+  const { vibeType } = req.body;
+
+  if (!vibeType) {
+    return res.status(400).json({ error: 'vibeType is required.' });
+  }
+
+  try {
+    // Security check: Ensure comment exists
+    const commentCheck = await query('SELECT id, user_id FROM comments WHERE id = $1', [commentId]);
+    if (commentCheck.rowCount === 0) {
+      return res.status(404).json({ error: 'Comment not found.' });
+    }
+    const commentAuthorId = commentCheck.rows[0].user_id;
+
+    // Upsert the vibe
+    await query(`
+        INSERT INTO comment_vibes (user_id, comment_id, vibe_type)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (user_id, comment_id)
+        DO UPDATE SET vibe_type = $3;
+    `, [userId, commentId, vibeType]);
+    
+    // Notify the author of the comment
+    if (commentAuthorId !== userId) {
+      await createNotification(commentAuthorId, userId, 'new_comment_vibe', commentId);
+    }
+
+    res.status(201).json({ message: 'Vibe added/updated successfully.' });
+  } catch (err) {
+    console.error('Add vibe to comment error:', err);
+    res.status(500).json({ error: 'Server error.' });
+  }
+};
+
+/**
+ * Removes a vibe from a comment.
+ */
+exports.removeVibeFromComment = async (req, res) => {
+  const { userId } = req;
+  const { commentId } = req.params;
+
+  try {
+    const result = await query(
+        'DELETE FROM comment_vibes WHERE user_id = $1 AND comment_id = $2',
+        [userId, commentId]
+    );
+
+    if (result.rowCount === 0) {
+        return res.status(404).json({ error: 'Vibe not found for this user and comment.' });
+    }
+
+    res.status(200).json({ message: 'Vibe removed successfully.' });
+  } catch (err) {
+    console.error('Remove vibe from comment error:', err);
+    res.status(500).json({ error: 'Server error.' });
   }
 };

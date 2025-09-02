@@ -44,4 +44,13 @@ router.post(
     messageController.sendMessage
 );
 
+// Mark messages in a conversation as read
+router.post(
+    '/:conversationId/messages/read',
+    authMiddleware.authenticate,
+    conversationIdRule(),
+    validate,
+    messageController.markMessagesAsRead
+);
+
 module.exports = router;

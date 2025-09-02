@@ -53,3 +53,24 @@ exports.getOpenReports = async (req, res) => {
         res.status(500).json({ error: 'Server error.' });
     }
 };
+
+exports.updateReportStatus = async (req, res) => {
+  const { reportId } = req.params;
+  const { status } = req.body;
+
+  try {
+    const result = await query(
+      "UPDATE reports SET status = $1 WHERE id = $2 RETURNING *",
+      [status, reportId]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Report not found.' });
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (err) {
+    console.error('Update report status error:', err);
+    res.status(500).json({ error: 'Server error while updating report status.' });
+  }
+};

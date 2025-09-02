@@ -69,7 +69,7 @@ exports.getConversations = async (req, res) => {
 };
 
 /**
- * Retrieves all messages for a specific conversation.
+ * Retrieves all messages for a specific conversation, now including read status and vibes.
  */
 exports.getMessagesForConversation = async (req, res) => {
     const { userId } = req;
@@ -85,7 +85,22 @@ exports.getMessagesForConversation = async (req, res) => {
         }
 
         const { rows } = await query(
-            `SELECT m.id, m.content, m.created_at, m.sender_id, u.username AS sender_username
+            `SELECT
+                m.id,
+                m.content,
+                m.created_at,
+                m.sender_id,
+                u.username AS sender_username,
+                (m.read_at IS NOT NULL) as read_by_recipient,
+                (
+                    SELECT COALESCE(json_object_agg(mv.vibe_type, mv.count), '{}'::json)
+                    FROM (
+                        SELECT vibe_type, COUNT(*) as count
+                        FROM message_vibes
+                        WHERE message_id = m.id
+                        GROUP BY vibe_type
+                    ) mv
+                ) as vibe_counts
              FROM messages m
              JOIN users u ON m.sender_id = u.id
              WHERE m.conversation_id = $1
@@ -98,6 +113,7 @@ exports.getMessagesForConversation = async (req, res) => {
         res.status(500).json({ error: 'Server error.' });
     }
 };
+
 
 /**
  * Sends a new message in a conversation.
@@ -143,6 +159,88 @@ exports.sendMessage = async (req, res) => {
         res.status(201).json(newMessage);
     } catch (err) {
         console.error('Send message error:', err);
+        res.status(500).json({ error: 'Server error.' });
+    }
+};
+
+/**
+ * Marks messages in a conversation as read by the current user.
+ */
+exports.markMessagesAsRead = async (req, res) => {
+    const { userId } = req;
+    const { conversationId } = req.params;
+
+    try {
+        // Security Check: User must be a participant
+        const participantCheck = await query(
+            'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
+            [conversationId, userId]
+        );
+        if (participantCheck.rows.length === 0) {
+            return res.status(403).json({ error: 'Forbidden.' });
+        }
+        
+        // Update messages that were NOT sent by the current user and are unread
+        await query(
+            `UPDATE messages
+             SET read_at = NOW()
+             WHERE conversation_id = $1
+             AND sender_id != $2
+             AND read_at IS NULL`,
+            [conversationId, userId]
+        );
+
+        res.status(204).send();
+
+    } catch (err) {
+        console.error('Mark messages as read error:', err);
+        res.status(500).json({ error: 'Server error.' });
+    }
+};
+
+/**
+ * Adds or updates a vibe on a message.
+ */
+exports.addVibeToMessage = async (req, res) => {
+    const { userId } = req;
+    const { messageId } = req.params;
+    const { vibeType } = req.body;
+
+    try {
+        // TODO: Add a security check to ensure the user is part of the message's conversation.
+
+        const vibeQuery = `
+            INSERT INTO message_vibes (user_id, message_id, vibe_type)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (user_id, message_id)
+            DO UPDATE SET vibe_type = $3;
+        `;
+        await query(vibeQuery, [userId, messageId, vibeType]);
+        res.status(201).json({ message: 'Vibe added to message successfully.' });
+    } catch (err) {
+        console.error('Add vibe to message error:', err);
+        res.status(500).json({ error: 'Server error.' });
+    }
+};
+
+/**
+ * Removes a vibe from a message.
+ */
+exports.removeVibeFromMessage = async (req, res) => {
+    const { userId } = req;
+    const { messageId } = req.params;
+
+    try {
+        const result = await query(
+            'DELETE FROM message_vibes WHERE user_id = $1 AND message_id = $2',
+            [userId, messageId]
+        );
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Vibe not found.' });
+        }
+        res.status(200).json({ message: 'Vibe removed from message successfully.' });
+    } catch (err) {
+        console.error('Remove vibe from message error:', err);
         res.status(500).json({ error: 'Server error.' });
     }
 };

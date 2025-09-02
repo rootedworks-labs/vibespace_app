@@ -301,6 +301,13 @@ const swaggerDefinition = {
         get: {
             tags: ['Posts'],
             summary: 'Get all posts',
+            parameters: [{
+                in: 'query',
+                name: 'vibe_channel_tag',
+                required: false,
+                schema: { type: 'string' },
+                description: 'Filter posts by a specific vibe channel tag.'
+            }],
             responses: {
                 '200': { description: 'A list of posts' }
             }
@@ -317,6 +324,11 @@ const swaggerDefinition = {
                             type: 'object',
                             properties: {
                                 content: { type: 'string', example: 'This is my first post!' },
+                                vibe_channel_tag: {
+                                    type: 'string',
+                                    nullable: true,
+                                    description: 'Optional tag for categorizing the post into a vibe channel.'
+                                },
                                 is_public: { type: 'boolean', example: true },
                                 media: {
                                     type: 'string',
@@ -484,6 +496,59 @@ const swaggerDefinition = {
           }
         }
       },
+      '/api/posts/comments/{commentId}/vibe': {
+        post: {
+          tags: ['Posts'],
+          summary: 'Give a vibe to a comment',
+          description: "Give a specific vibe to a comment. A user can only have one vibe per comment. If a vibe already exists from the user, this will update it.",
+          security: [{ bearerAuth: [] }],
+          parameters: [{
+            in: 'path',
+            name: 'commentId',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'The ID of the comment to give a vibe to'
+          }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['vibe_type'],
+                  properties: {
+                    vibe_type: {
+                      type: 'string',
+                      example: 'fire',
+                      description: "The type of vibe (e.g., 'energy', 'flow', 'fire')."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            '201': { description: 'Vibe added or updated successfully.' },
+            '404': { description: 'Comment not found.' }
+          }
+        },
+        delete: {
+          tags: ['Posts'],
+          summary: 'Remove a vibe from a comment',
+          security: [{ bearerAuth: [] }],
+          parameters: [{
+            in: 'path',
+            name: 'commentId',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'The ID of the comment to remove the vibe from'
+          }],
+          responses: {
+            '200': { description: 'Vibe removed successfully.' },
+            '404': { description: 'Vibe not found for this user on this comment.' }
+          }
+        }
+      },
       // Feed Route
       '/api/feed': {
           get: {
@@ -606,6 +671,25 @@ const swaggerDefinition = {
           }
         }
       },
+      '/api/conversations/{conversationId}/read': {
+        post: {
+          tags: ['Conversations'],
+          summary: 'Mark all messages in a conversation as read',
+          description: 'Updates the `read_at` timestamp for all unread messages sent by other users in the conversation.',
+          security: [{ bearerAuth: [] }],
+          parameters: [{
+            in: 'path',
+            name: 'conversationId',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'The ID of the conversation to mark as read'
+          }],
+          responses: {
+            '204': { description: 'Messages marked as read successfully.' },
+            '403': { description: 'Forbidden. User is not a participant.' }
+          }
+        }
+      },
       '/api/conversations/{conversationId}/messages': {
         get: {
           tags: ['Conversations'],
@@ -650,6 +734,67 @@ const swaggerDefinition = {
           responses: {
             '201': { description: 'Message sent' },
             '403': { description: 'Forbidden' }
+          }
+        }
+      },
+      '/api/conversations/{conversationId}/messages/{messageId}/vibe': {
+        post: {
+          tags: ['Conversations'],
+          summary: 'Give a vibe to a message',
+          description: "Give a specific vibe to a message. A user can only have one vibe per message. If a vibe already exists from the user, this will update it.",
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            {
+              in: 'path',
+              name: 'conversationId',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'The ID of the conversation'
+            },
+            {
+              in: 'path',
+              name: 'messageId',
+              required: true,
+              schema: { type: 'integer' },
+              description: 'The ID of the message to give a vibe to'
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['vibe_type'],
+                  properties: {
+                    vibe_type: {
+                      type: 'string',
+                      example: 'energy',
+                      description: "The type of vibe (e.g., 'energy', 'flow', 'fire')."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            '201': { description: 'Vibe added or updated successfully.' },
+            '403': { description: 'Forbidden' },
+            '404': { description: 'Message or conversation not found.' }
+          }
+        },
+        delete: {
+          tags: ['Conversations'],
+          summary: 'Remove a vibe from a message',
+          security: [{ bearerAuth: [] }],
+          parameters: [
+            { in: 'path', name: 'conversationId', required: true, schema: { type: 'integer' }, description: 'The ID of the conversation' },
+            { in: 'path', name: 'messageId', required: true, schema: { type: 'integer' }, description: 'The ID of the message to remove the vibe from' }
+          ],
+          responses: {
+            '200': { description: 'Vibe removed successfully.' },
+            '403': { description: 'Forbidden' },
+            '404': { description: 'Vibe not found for this user on this message.' }
           }
         }
       },
@@ -717,6 +862,63 @@ const swaggerDefinition = {
             '200': { description: 'A list of open reports' },
             '401': { description: 'Unauthorized' },
             '403': { description: 'Forbidden - User is not an admin' }
+          }
+        }
+      },
+      '/api/admin/users/{userId}/suspend': {
+        post: {
+          tags: ['Admin'],
+          summary: 'Suspend a user account',
+          description: 'Requires admin role. Suspends a user until a specified date.',
+          security: [{ bearerAuth: [] }],
+          parameters: [{
+            in: 'path',
+            name: 'userId',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'The ID of the user to suspend'
+          }],
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['suspended_until'],
+                  properties: {
+                    suspended_until: {
+                      type: 'string',
+                      format: 'date-time',
+                      example: '2025-12-31T23:59:59Z',
+                      description: 'The ISO 8601 timestamp until which the user is suspended.'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            '200': { description: 'User suspended successfully.' },
+            '403': { description: 'Forbidden - User is not an admin' },
+            '404': { description: 'User not found' }
+          }
+        },
+        delete: {
+          tags: ['Admin'],
+          summary: 'Unsuspend a user account',
+          description: 'Requires admin role. Lifts a user\'s suspension by setting `suspended_until` to null.',
+          security: [{ bearerAuth: [] }],
+          parameters: [{
+            in: 'path',
+            name: 'userId',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'The ID of the user to unsuspend'
+          }],
+          responses: {
+            '200': { description: 'User suspension lifted successfully.' },
+            '403': { description: 'Forbidden - User is not an admin' },
+            '404': { description: 'User not found' }
           }
         }
       }

@@ -58,20 +58,25 @@ exports.getUserByUsername = async (req, res) => {
   const { username } = req.params;
   const currentUserId = req.userId || null;
   try {
-    // Fetch user from DB, excluding sensitive fields
-    // const { rows } = await query(
-    //   `SELECT id, username, bio, website, profile_picture_url, created_at
-    //    FROM users
-    //    WHERE username = $1`,
-    //   [username]
-    // );
-
     const userQuery = `
       SELECT
         u.id, u.username, u.bio, u.website, u.profile_picture_url, u.created_at,
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) as following_count,
         (SELECT COUNT(*) FROM follows WHERE followee_id = u.id) as followers_count,
-        EXISTS (SELECT 1 FROM follows WHERE follower_id = $2 AND followee_id = u.id) as is_following
+        EXISTS (SELECT 1 FROM follows WHERE follower_id = $2 AND followee_id = u.id) as is_following,
+        
+        -- Calculate all vibe counts for the user's posts and aggregate into a JSON object
+        (
+          SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
+          FROM (
+            SELECT vibe_type, COUNT(*) as count
+            FROM vibes
+            JOIN posts ON vibes.post_id = posts.id
+            WHERE posts.user_id = u.id
+            GROUP BY vibe_type
+          ) v
+        ) as vibe_counts
+
       FROM users u
       WHERE u.username = $1
     `;
@@ -81,7 +86,31 @@ exports.getUserByUsername = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    res.json(rows[0]);
+    const user = rows[0];
+
+    // --- Calculate dominant_vibe from vibe_counts ---
+    const vibeCounts = user.vibe_counts;
+    let dominantVibe = null;
+    let maxCount = 0;
+    
+    if (vibeCounts && typeof vibeCounts === 'object' && Object.keys(vibeCounts).length > 0) {
+      const counts = Object.values(vibeCounts);
+      maxCount = Math.max(...counts);
+      
+      const topVibes = Object.keys(vibeCounts).filter(vibe => vibeCounts[vibe] === maxCount);
+      
+      // If there is only one vibe with the highest count, it's the dominant one.
+      // If there's a tie, dominantVibe remains null.
+      if (topVibes.length === 1) {
+        dominantVibe = topVibes[0];
+      }
+    }
+
+    // Add the calculated dominant_vibe to the user object
+    user.dominant_vibe = dominantVibe;
+
+    res.json(user);
+    
   } catch (err) {
     console.error(`Failed to fetch user ${username}:`, err);
     res.status(500).json({ error: 'Server error' });

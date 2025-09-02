@@ -3,12 +3,11 @@ const sharp = require('sharp');
 const { uploadFileToMinIO } = require('../services/fileStorage');
 
 /**
- * Creates a new post for the authenticated user, with an optional image.
+ * Creates a new post for the authenticated user, with an optional image and vibe channel tag.
  */
 exports.createPost = async (req, res) => {
   const { userId } = req;
-  // Content now comes from the multipart form body
-  const { content, is_public = true } = req.body;
+  const { content, is_public = true, vibe_channel_tag } = req.body;
   const file = req.file;
 
   if (!content && !file) {
@@ -18,25 +17,19 @@ exports.createPost = async (req, res) => {
   let mediaUrl = null;
 
   try {
-    // If a file is uploaded, process and upload it
     if (file) {
-      // Process the image with Sharp for optimization
       const processedImageBuffer = await sharp(file.buffer)
-        .resize(1080, 1080, { fit: 'inside', withoutEnlargement: true }) // Resize for social media
-        .webp({ quality: 80 }) // Convert to efficient WebP format
+        .resize(1080, 1080, { fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
         .toBuffer();
 
-      // Define a unique key for the file in MinIO/S3
       const key = `posts/user-${userId}-${Date.now()}.webp`;
-
-      // Upload the processed image using your existing service
       mediaUrl = await uploadFileToMinIO(key, processedImageBuffer, 'image/webp');
     }
 
-    // Insert the new post into the database
     const newPost = await query(
-      'INSERT INTO posts (user_id, content, is_public, media_url) VALUES ($1, $2, $3, $4) RETURNING *',
-      [userId, content || '', is_public, mediaUrl]
+      'INSERT INTO posts (user_id, content, is_public, media_url, vibe_channel_tag) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [userId, content || '', is_public, mediaUrl, vibe_channel_tag]
     );
     
     res.status(201).json(newPost.rows[0]);
@@ -47,11 +40,11 @@ exports.createPost = async (req, res) => {
 };
 
 /**
- * Retrieves a single post by its ID, including the author's username and like count.
+ * Retrieves a single post by its ID, including the author's username and vibe data.
  */
 exports.getPostById = async (req, res) => {
   const { postId } = req.params;
-  const { userId } = req; // Can be undefined if user is not logged in
+  const { userId } = req;
 
   try {
     const postQuery = `
@@ -62,8 +55,16 @@ exports.getPostById = async (req, res) => {
         p.is_public,
         p.created_at,
         u.username,
-        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
-        EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $2) as has_liked
+        (SELECT vibe_type FROM vibes WHERE post_id = p.id AND user_id = $2) as user_vibe,
+        (
+          SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
+          FROM (
+            SELECT vibe_type, COUNT(*) as count
+            FROM vibes
+            WHERE post_id = p.id
+            GROUP BY vibe_type
+          ) v
+        ) as vibe_counts
       FROM posts p
       JOIN users u ON p.user_id = u.id
       WHERE p.id = $1`;
@@ -82,22 +83,40 @@ exports.getPostById = async (req, res) => {
 };
 
 /**
- * Retrieves all posts, including the author's username and like count.
+ * Retrieves all posts, with optional filtering by vibe_channel_tag.
  */
 exports.getPosts = async (req, res) => {
-  const { userId } = req; // Can be undefined
+  const { userId } = req;
+  const { vibe_channel_tag } = req.query;
+
+  let queryText = `
+    SELECT
+      p.*,
+      u.username,
+      (SELECT vibe_type FROM vibes WHERE post_id = p.id AND user_id = $1) as user_vibe,
+      (
+        SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
+        FROM (
+          SELECT vibe_type, COUNT(*) as count
+          FROM vibes
+          WHERE post_id = p.id
+          GROUP BY vibe_type
+        ) v
+      ) as vibe_counts
+    FROM posts p
+    JOIN users u ON p.user_id = u.id
+  `;
+  const queryParams = [userId];
+
+  if (vibe_channel_tag) {
+    queryParams.push(vibe_channel_tag);
+    queryText += ` WHERE p.vibe_channel_tag = $${queryParams.length}`;
+  }
+
+  queryText += ' ORDER BY p.created_at DESC';
 
   try {
-    const result = await query(`
-      SELECT
-        p.*,
-        u.username,
-        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
-        EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as has_liked
-      FROM posts p
-      JOIN users u ON p.user_id = u.id
-      ORDER BY p.created_at DESC
-    `, [userId]);
+    const result = await query(queryText, queryParams);
     res.json(result.rows);
   } catch (err) {
     console.error(err);
@@ -109,8 +128,7 @@ exports.getPosts = async (req, res) => {
  * Deletes a post, but only if the authenticated user is the owner.
  */
 exports.deletePost = async (req, res) => {
-  console.log(`--- DELETE /api/posts/:postId route hit for postId: ${req.params.postId} ---`);
-  const { userId } = req; // This is the ID of the user making the request
+  const { userId } = req;
   const postId = parseInt(req.params.postId, 10);
 
   if (isNaN(postId)) {
@@ -118,34 +136,12 @@ exports.deletePost = async (req, res) => {
   }
 
   try {
-    // --- START: DIAGNOSTIC LOGGING ---
-    // 1. Let's find out who the author of the post is
-    const postAuthorResult = await query('SELECT user_id FROM posts WHERE id = $1', [postId]);
-
-    if (postAuthorResult.rows.length === 0) {
-      console.log(`--- DEBUG: Post with ID ${postId} not found at all.`);
-      return res.status(404).json({ error: 'Post not found.' });
-    }
-
-    const postAuthorId = postAuthorResult.rows[0].user_id;
-
-    // 2. Log the IDs to the console
-    console.log('--- DELETE POST DEBUG ---');
-    console.log(`Attempting to delete post ID: ${postId}`);
-    console.log(`User making request (from token): User ID ${userId}`);
-    console.log(`Author of the post (from database): User ID ${postAuthorId}`);
-    console.log(`Do the user IDs match? ${userId === postAuthorId}`);
-    console.log('-------------------------');
-    // --- END: DIAGNOSTIC LOGGING ---
-
-    // The original delete query
     const result = await query(
       'DELETE FROM posts WHERE id = $1 AND user_id = $2 RETURNING id',
       [postId, userId]
     );
 
     if (result.rowCount === 0) {
-      // This part will still run if the IDs do not match
       return res.status(404).json({ error: 'Post not found or you do not have permission to delete it.' });
     }
 
@@ -171,14 +167,20 @@ exports.getFeed = async (req, res) => {
           p.created_at,
           u.username,
           u.profile_picture_url,
-          (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
-          EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $1) as has_liked
+          (SELECT vibe_type FROM vibes WHERE post_id = p.id AND user_id = $1) as user_vibe,
+          (
+            SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
+            FROM (
+              SELECT vibe_type, COUNT(*) as count
+              FROM vibes
+              WHERE post_id = p.id
+              GROUP BY vibe_type
+            ) v
+          ) as vibe_counts
         FROM posts p
         JOIN users u ON p.user_id = u.id
         WHERE 
-          -- The post is from a user they follow
           p.user_id IN (SELECT followee_id FROM follows WHERE follower_id = $1)
-          -- OR the post is their own
           OR p.user_id = $1
         ORDER BY p.created_at DESC;
       `;
@@ -193,15 +195,23 @@ exports.getFeed = async (req, res) => {
 
   exports.getPostsByUsername = async (req, res) => {
   const { username } = req.params;
-  const currentUserId = req.userId || null; // For checking 'has_liked' status
+  const currentUserId = req.userId || null;
 
   try {
     const result = await query(`
       SELECT
         p.*,
         u.username,
-        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as like_count,
-        EXISTS(SELECT 1 FROM likes WHERE post_id = p.id AND user_id = $2) as has_liked
+        (SELECT vibe_type FROM vibes WHERE post_id = p.id AND user_id = $2) as user_vibe,
+        (
+          SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
+          FROM (
+            SELECT vibe_type, COUNT(*) as count
+            FROM vibes
+            WHERE post_id = p.id
+            GROUP BY vibe_type
+          ) v
+        ) as vibe_counts
       FROM posts p
       JOIN users u ON p.user_id = u.id
       WHERE u.username = $1
@@ -214,3 +224,4 @@ exports.getFeed = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+

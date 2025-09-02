@@ -69,9 +69,31 @@ const createPostRules = () => {
         body('is_public')
             .optional()
             .isBoolean()
-            .withMessage('is_public must be a boolean value (true or false).')
+            .withMessage('is_public must be a boolean value (true or false).'),
+        // Add validation for the new vibe channel tag
+        body('vibe_channel_tag')
+            .optional()
+            .trim()
+            .isString()
+            .isLength({ min: 1, max: 50 })
+            .withMessage('Vibe channel tag must be between 1 and 50 characters.')
+            .matches(/^[a-zA-Z0-9_]+$/)
+            .withMessage('Vibe channel tag can only contain letters, numbers, and underscores.')
     ];
 };
+
+// --- New: Rules for filtering posts ---
+const getPostsRules = () => {
+    return [
+        query('vibe_channel_tag')
+            .optional()
+            .trim()
+            .isString()
+            .isLength({ min: 1, max: 50 })
+            .withMessage('Vibe channel tag must be between 1 and 50 characters.')
+    ];
+};
+
 
 // --- New: Rules for Granting Consent ---
 const grantConsentRules = () => {
@@ -159,6 +181,25 @@ const sendMessageRules = () => {
     ];
 };
 
+const addVibeRules = () => {
+    return [
+        body('vibeType')
+            .trim()
+            .notEmpty()
+            .withMessage('vibeType is required.')
+            .isString()
+            .withMessage('vibeType must be a string.')
+    ];
+};
+
+const messageIdRule = () => {
+    return [
+        param('messageId')
+            .isInt({ min: 1 })
+            .withMessage('Message ID must be a positive integer.')
+    ];
+};
+
 // --- New: Reusable rule for validating a conversation ID in the URL ---
 const conversationIdRule = () => {
     return [
@@ -212,22 +253,70 @@ const createReportRules = () => {
     ];
 };
 
+// --- Reusable rule for validating a report ID in the URL ---
+const reportIdRule = () => {
+    return [
+        param('reportId').isInt({ min: 1 }).withMessage('Report ID must be a positive integer.')
+    ];
+};
+
+// --- Reusable rule for validating a user ID in the URL params ---
+const userIdRule = () => {
+    return [
+        param('userId').isInt({ min: 1 }).withMessage('User ID must be a positive integer.')
+    ];
+};
+
+const updateReportStatusRules = () => {
+    return [
+        param('reportId')
+            .isInt({ min: 1 })
+            .withMessage('Report ID must be a positive integer.'),
+        body('status')
+            .isIn(['dismissed', 'action_taken', 'open'])
+            .withMessage('Status must be one of: dismissed, action_taken, open.')
+    ];
+};
+
+const suspendUserRules = () => {
+    return [
+        param('userId')
+            .isInt({ min: 1 })
+            .withMessage('User ID must be a positive integer.'),
+        body('durationHours')
+            .custom((value) => {
+                if (value === null || typeof value === 'number' && value > 0) {
+                    return true;
+                }
+                throw new Error('durationHours must be a positive number or null for permanent suspension.');
+            })
+    ];
+};
+
 
 module.exports = {
   registerRules,
   loginRules, // Added export
   updateProfileRules,
   createPostRules,
+  getPostsRules, // Export the new rule
   grantConsentRules,
   postIdRule,
   usernameRule,
   validate,
   createCommentRules,
   commentIdRule,
+  addVibeRules,
+  messageIdRule,
   searchUsersRules, // Added export
   createConversationRules,
   sendMessageRules,
   conversationIdRule,
   waitlistRules,
   createReportRules,
+  reportIdRule,
+  userIdRule,
+  updateReportStatusRules,
+  suspendUserRules
 };
+

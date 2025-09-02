@@ -18,13 +18,22 @@ exports.authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     console.log(`--- AUTH MIDDLEWARE: Token decoded successfully for user ID: ${decoded.id}`);
     
-    // Verify user still exists in the database
-    const { rows } = await query('SELECT 1 FROM users WHERE id = $1', [decoded.id]);
+    
+    // Verify user still exists in the database and is not suspended
+    const { rows } = await query('SELECT suspended_until FROM users WHERE id = $1', [decoded.id]);
     if (!rows.length) {
       console.log(`--- AUTH MIDDLEWARE [FAIL]: User ID ${decoded.id} from token not found in DB.`);
       throw new Error('User not found');
     }
-    console.log(`--- AUTH MIDDLEWARE: User ID ${decoded.id} confirmed in DB.`);
+
+    // Check for suspension
+    const { suspended_until } = rows[0];
+    if (suspended_until && new Date(suspended_until) > new Date()) {
+        console.log(`--- AUTH MIDDLEWARE [FAIL]: User ID ${decoded.id} is suspended.`);
+        return res.status(403).json({ error: 'Forbidden: This account is suspended.' });
+    }
+    
+    console.log(`--- AUTH MIDDLEWARE: User ID ${decoded.id} confirmed in DB and not suspended.`);
 
     req.userId = decoded.id;
     
@@ -38,3 +47,4 @@ exports.authenticate = async (req, res, next) => {
     res.status(401).json({ error: 'Invalid token' });
   }
 };
+
