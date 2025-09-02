@@ -17,7 +17,7 @@ interface ParticleState {
 }
 
 interface EnergyStreamProps {
-  vibeCounts: Partial<Record<VibeType, number>>;
+  vibeCounts: Partial<Record<VibeType, number>> | null | undefined;
 }
 
 const MAX_PARTICLES = 50;
@@ -48,13 +48,14 @@ export function EnergyStream({ vibeCounts }: EnergyStreamProps) {
     // Don't create particles until the container has been measured
     if (!containerSize || containerSize.width === 0) return;
 
-    const totalVibes = Object.values(vibeCounts).reduce((sum, count) => sum + (count || 0), 0);
+    // Use vibeCounts || {} to prevent crash on null/undefined
+    const totalVibes = Object.values(vibeCounts || {}).reduce((sum, count) => sum + (count || 0), 0);
     if (totalVibes === 0) {
       setParticles([]);
       return;
     }
 
-    const newParticles = Object.entries(vibeCounts).flatMap(([vibe, count]) => {
+    const newParticles = Object.entries(vibeCounts || {}).flatMap(([vibe, count]) => {
       const proportion = totalVibes > 0 ? (count || 0) / totalVibes : 0;
       const numParticles = Math.round(proportion * Math.min(totalVibes, MAX_PARTICLES));
       

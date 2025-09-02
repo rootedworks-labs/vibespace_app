@@ -4,13 +4,16 @@ import { useState } from 'react';
 import { useSWRConfig } from 'swr';
 import api from '@/src/app/api';
 import { Button } from '@/src/app/components/ui/Button';
-import { Textarea } from '@/src/app/components/ui/TextArea'; // We'll create this next
+import { Textarea } from '@/src/app/components/ui/TextArea';
 import { useAuthStore } from '@/src/app/store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/app/components/ui/Avatar';
 import toast from 'react-hot-toast';
+import { VibeSelector } from '@/src/app/components/prototypes/VibeSelector';
+import { vibeConfig } from '@/src/app/components/prototypes/vibe-config';
 
 export function CreatePostForm() {
   const [content, setContent] = useState('');
+  const [selectedVibe, setSelectedVibe] = useState<string | null>(null);
   const { user } = useAuthStore();
   const { mutate } = useSWRConfig();
 
@@ -18,22 +21,18 @@ export function CreatePostForm() {
     e.preventDefault();
     if (!content.trim()) return;
 
-    // Show a loading toast
     const toastId = toast.loading('Creating post...');
 
     try {
-      // Your backend expects { content, is_public }
-      await api.post('/posts', { content });
-      setContent(''); // Clear the textarea
-      // Tell SWR to re-fetch the posts feed so the new post appears
+      // The backend will need to be updated to accept `vibe_channel_tag`
+      await api.post('/posts', { content, vibe_channel_tag: selectedVibe });
+      setContent('');
+      setSelectedVibe(null);
       mutate('/posts');
-
-      // Show a success toast
       toast.success('Post created successfully!', { id: toastId });
 
     } catch (error) {
       console.error('Failed to create post:', error);
-      // Show an error toast
       toast.error('Failed to create post.', { id: toastId });
     }
   };
@@ -54,7 +53,14 @@ export function CreatePostForm() {
             onChange={(e) => setContent(e.target.value)}
             className="w-full text-lg border-none focus:ring-0 resize-none p-0"
           />
-          <div className="flex justify-end mt-2">
+          <div className="mt-4 flex justify-between items-center">
+            <div>
+                <VibeSelector 
+                    onVibeSelect={(vibe) => setSelectedVibe(vibe === selectedVibe ? null : vibe)} 
+                    size="sm"
+                />
+                {selectedVibe && <p className="text-xs mt-1 text-gray-500">Posting to #{selectedVibe} channel</p>}
+            </div>
             <Button type="submit" disabled={!content.trim()}>Post</Button>
           </div>
         </form>

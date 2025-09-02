@@ -2,12 +2,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSWRConfig } from 'swr';
+import api from '@/src/app/api';
+import toast from 'react-hot-toast';
+
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/Avatar';
 import { EnergyStream } from './EnergyStream';
 import { VibeSelector } from './VibeSelector';
 import { Button } from '../ui/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/Popover';
 import { Icon } from '@iconify/react';
+import { cn } from '@/lib/utils';
+
 
 type VibeCounts = {
   flow?: number;
@@ -20,6 +26,7 @@ type VibeCounts = {
 };
 
 interface VibeCardProps {
+  id: number; // The post ID is now required
   author: string;
   timeWindow: 'Morning' | 'Afternoon' | 'Evening';
   text?: string;
@@ -42,58 +49,86 @@ const getWindowGradient = (window: VibeCardProps['timeWindow']) => {
   }
 };
 
-export function VibeCard({ author, timeWindow, text, mediaUrl, mediaType, vibeCounts }: VibeCardProps) {
+const getGlowClass = (window: VibeCardProps['timeWindow']) => {
+    switch (window) {
+        case 'Morning':
+            return 'vibe-glow-sage';
+        case 'Afternoon':
+            return 'vibe-glow-terracotta';
+        case 'Evening':
+            return 'vibe-glow-deep-blue';
+        default:
+            return '';
+    }
+}
+
+export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vibeCounts }: VibeCardProps) {
   const gradient = getWindowGradient(timeWindow);
+  const glow = getGlowClass(timeWindow);
   const [localVibeCounts, setLocalVibeCounts] = useState(vibeCounts);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  // --- THIS IS THE FIX ---
-  // 1. Add state to track the current user's selected vibe for this card
   const [currentUserVibe, setCurrentUserVibe] = useState<string | null>(null);
+  
+  const { mutate } = useSWRConfig();
 
   useEffect(() => {
     setLocalVibeCounts(vibeCounts);
-    setCurrentUserVibe(null); // Reset user's vibe when props change
+    setCurrentUserVibe(null);
   }, [vibeCounts]);
 
-  // 2. Update the handler with more complete logic
-  const handleVibeSelect = (vibeType: string) => {
+  const handleVibeSelect = async (vibeType: string) => {
+    const originalVibeCounts = { ...localVibeCounts };
+    const originalUserVibe = currentUserVibe;
+
+    // Optimistic UI Update
     setLocalVibeCounts(prevCounts => {
       const newCounts = { ...prevCounts };
-
-      // If there was a previous vibe, decrement its count
       if (currentUserVibe) {
         newCounts[currentUserVibe as keyof VibeCounts] = (newCounts[currentUserVibe as keyof VibeCounts] || 1) - 1;
       }
-
-      // If the user is selecting a new vibe (not just un-vibing)
       if (currentUserVibe !== vibeType) {
         newCounts[vibeType as keyof VibeCounts] = (newCounts[vibeType as keyof VibeCounts] || 0) + 1;
         setCurrentUserVibe(vibeType);
       } else {
-        // If they clicked the same vibe again, they are un-vibing
         setCurrentUserVibe(null);
       }
-      
       return newCounts;
     });
     setIsPopoverOpen(false);
+
+    // API Call
+    try {
+      if (originalUserVibe === vibeType) {
+        // User is removing their vibe
+        await api.delete(`/posts/${id}/vibe`);
+      } else {
+        // User is adding or changing their vibe
+        await api.post(`/posts/${id}/vibe`, { vibe_type: vibeType });
+      }
+      // Revalidate the feed to get the latest data from the server
+      mutate('/feed');
+    } catch (error) {
+      toast.error("Could not save your vibe. Please try again.");
+      // Revert the UI on error
+      setLocalVibeCounts(originalVibeCounts);
+      setCurrentUserVibe(originalUserVibe);
+    }
   };
-  // --- END FIX ---
 
   return (
     <div
-      className={`
-       w-[28rem] rounded-2xl shadow-lg 
-        bg-gradient-to-br ${gradient}
-        border border-white/50 overflow-hidden
-      `}
+      className={cn(
+       'w-[28rem] rounded-2xl shadow-lg bg-gradient-to-br border border-white/50 overflow-hidden',
+        gradient,
+        glow
+      )}
     >
       {/* Header */}
       <div className="p-6">
         <div className="flex items-center space-x-4">
           <Avatar>
             <AvatarImage src="https://placehold.co/40x40" />
-            <AvatarFallback>{author.substring(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarFallback>{author?.substring(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div>
             <p className="font-bold font-heading">{author}</p>
@@ -127,7 +162,7 @@ export function VibeCard({ author, timeWindow, text, mediaUrl, mediaType, vibeCo
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 border-none shadow-none bg-transparent">
-              <VibeSelector onVibeSelect={handleVibeSelect} />
+              <VibeSelector onVibeSelect={handleVibeSelect} timeWindow={timeWindow}/>
             </PopoverContent>
           </Popover>
         </div>
@@ -135,3 +170,4 @@ export function VibeCard({ author, timeWindow, text, mediaUrl, mediaType, vibeCo
     </div>
   );
 }
+

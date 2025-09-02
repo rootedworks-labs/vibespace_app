@@ -20,20 +20,52 @@
   
   
 
-  --color-vibe-flow: #14b8a6;  /* Yellow */
-  --color-vibe-joy: #fbbf24;    /* Blue */
-  --color-vibe-hype: #EF4444;    /* Red */
-  --color-vibe-warmth: #fb923c;   /* Purple */
-  --color-vibe-glow: #38b2f6;     /* Pink */
-  --color-vibe-reflect: #6366f1;  /* Indigo */
-  --color-vibe-love: #f472b6
+  --color-vibe-flow: #14b8a6;
+  --color-vibe-joy: #fbbf24;
+  --color-vibe-hype: #EF4444;
+  --color-vibe-warmth: #fb923c;
+  --color-vibe-glow: #38b2f6;
+  --color-vibe-reflect: #6366f1;
+  --color-vibe-love: #f472b6;
 
-  --color-aura-fire-start: #F87171; /* red-400 */
-  --color-aura-fire-end: #FBBF24;   /* amber-300 */
-  --color-aura-flow-start: #60A5FA; /* blue-400 */
-  --color-aura-flow-end: #93C5FD;   /* blue-300 */
-  --color-aura-magic-start: #A78BFA;/* violet-400 */
-  --color-aura-magic-end: #C4B5FD; /* violet-300 */
+  /* --- NEW AURA COLORS --- */
+  --color-aura-flow-start: #14b8a6;
+  --color-aura-flow-end: #5eead4;
+  --color-aura-joy-start: #fbbf24;
+  --color-aura-joy-end: #fde047;
+  --color-aura-hype-start: #EF4444;
+  --color-aura-hype-end: #f87171;
+  --color-aura-warmth-start: #fb923c;
+  --color-aura-warmth-end: #fed7aa;
+  --color-aura-glow-start: #38b2f6;
+  --color-aura-glow-end: #7dd3fc;
+  --color-aura-reflect-start: #6366f1;
+  --color-aura-reflect-end: #a5b4fc;
+  --color-aura-love-start: #f472b6;
+  --color-aura-love-end: #f9a8d4;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .vibe-glow-terracotta {
+    box-shadow: 0 0 20px 5px theme('colors.brand.terracotta / 10%');
+  }
+  .vibe-glow-sage {
+    box-shadow: 0 0 20px 5px theme('colors.brand.sage / 10%');
+  }
+  .vibe-glow-sand {
+    box-shadow: 0 0 20px 5px theme('colors.brand.sand / 10%');
+  }
+  .vibe-glow-deep-blue {
+    box-shadow: 0 0 20px 5px theme('colors.brand.deep-blue / 10%');
+  }
 }
 
 @keyframes flow {
@@ -45,7 +77,7 @@
     opacity: 1;
   }
   100% {
-    transform: translateX(100vw) scale(1); /* Animate across the full viewport width */
+    transform: translateX(100vw) scale(1);
     opacity: 0;
   }
 }
