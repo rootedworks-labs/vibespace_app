@@ -26,8 +26,9 @@ type VibeCounts = {
 };
 
 interface VibeCardProps {
-  id: number; // The post ID is now required
+  id: number;
   author: string;
+  avatarUrl?: string;
   timeWindow: 'Morning' | 'Afternoon' | 'Evening';
   text?: string;
   mediaUrl?: string;
@@ -62,19 +63,20 @@ const getGlowClass = (window: VibeCardProps['timeWindow']) => {
     }
 }
 
-export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vibeCounts }: VibeCardProps) {
+export function VibeCard({ id, author, avatarUrl, timeWindow, text, mediaUrl, mediaType, vibeCounts }: VibeCardProps) {
   const gradient = getWindowGradient(timeWindow);
   const glow = getGlowClass(timeWindow);
   const [localVibeCounts, setLocalVibeCounts] = useState(vibeCounts);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [currentUserVibe, setCurrentUserVibe] = useState<string | null>(null);
-  
+
   const { mutate } = useSWRConfig();
 
+  // This effect now correctly syncs state when the story changes, but not on interaction.
   useEffect(() => {
     setLocalVibeCounts(vibeCounts);
     setCurrentUserVibe(null);
-  }, [vibeCounts]);
+  }, [id]); // Depend on the post ID, which is stable within a story.
 
   const handleVibeSelect = async (vibeType: string) => {
     const originalVibeCounts = { ...localVibeCounts };
@@ -97,22 +99,22 @@ export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vi
     setIsPopoverOpen(false);
 
     // API Call
-    try {
-      if (originalUserVibe === vibeType) {
-        // User is removing their vibe
-        await api.delete(`/posts/${id}/vibe`);
-      } else {
-        // User is adding or changing their vibe
-        await api.post(`/posts/${id}/vibe`, { vibe_type: vibeType });
-      }
-      // Revalidate the feed to get the latest data from the server
-      mutate('/feed');
-    } catch (error) {
-      toast.error("Could not save your vibe. Please try again.");
-      // Revert the UI on error
-      setLocalVibeCounts(originalVibeCounts);
-      setCurrentUserVibe(originalUserVibe);
-    }
+    // try {
+    //   if (originalUserVibe === vibeType) {
+    //     // User is removing their vibe
+    //     await api.delete(`/posts/${id}/vibe`);
+    //   } else {
+    //     // User is adding or changing their vibe
+    //     await api.post(`/posts/${id}/vibe`, { vibe_type: vibeType });
+    //   }
+    //   // Revalidate the feed to get the latest data from the server
+    //   mutate('/feed');
+    // } catch (error) {
+    //   toast.error("Could not save your vibe. Please try again.");
+    //   // Revert the UI on error
+    //   setLocalVibeCounts(originalVibeCounts);
+    //   setCurrentUserVibe(originalUserVibe);
+    // }
   };
 
   return (
@@ -127,7 +129,7 @@ export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vi
       <div className="p-6">
         <div className="flex items-center space-x-4">
           <Avatar>
-            <AvatarImage src="https://placehold.co/40x40" />
+            <AvatarImage src={avatarUrl} />
             <AvatarFallback>{author?.substring(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div>

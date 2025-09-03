@@ -1,28 +1,22 @@
 'use client';
 
-import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import api from '@/src/app/api';
 import toast from 'react-hot-toast';
-import { Input } from '@/src/app/components/ui/Input';
 import { Button } from '@/src/app/components/ui/Button';
-import { Waves, Sparkles, Heart } from 'lucide-react';
+import { Input } from '@/src/app/components/ui/Input';
+import { HeartHandshake, Clock, ShieldCheck } from 'lucide-react';
 
-// Validation schema for the email form
 const waitlistSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  email: z.string().email({ message: 'Please enter a valid email.' }),
 });
 
 export default function WaitlistPage() {
-  const [isSubmitted, setIsSubmitted] = useState(false);
-
   const form = useForm<z.infer<typeof waitlistSchema>>({
     resolver: zodResolver(waitlistSchema),
-    defaultValues: {
-      email: '',
-    },
+    defaultValues: { email: '' },
   });
 
   const { isSubmitting, errors } = form.formState;
@@ -30,58 +24,71 @@ export default function WaitlistPage() {
   const onSubmit = async (values: z.infer<typeof waitlistSchema>) => {
     try {
       await api.post('/waitlist', values);
-      setIsSubmitted(true);
-      toast.success('You\'re on the list! We\'ll be in touch soon.');
-    } catch (error: any) {
-      if (error.response?.status === 200) {
-        // The API returns 200 if the email is already subscribed
-        setIsSubmitted(true);
-        toast.success('You\'re already on the list!');
-      } else {
-        toast.error('Something went wrong. Please try again.');
-        console.error('Waitlist submission failed:', error);
-      }
+      toast.success('Thank you for joining the waitlist!');
+      form.reset();
+    } catch (error) {
+      toast.error('Something went wrong. Please try again.');
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-sand to-brand-sage flex flex-col items-center justify-center p-8">
-      <div className="w-full max-w-md text-center">
-        <div className="flex justify-center items-center space-x-4 text-brand-deep-blue mb-6">
-            <Waves className="h-8 w-8" />
-            <Sparkles className="h-8 w-8" />
-            <Heart className="h-8 w-8" />
-        </div>
-        
-        <h1 className="font-heading text-5xl font-black text-brand-deep-blue">VibeSpace</h1>
-        <p className="mt-4 text-xl text-brand-deep-blue/80">
-          Authentic connection. No algorithms.
-        </p>
-
-        {isSubmitted ? (
-          <div className="mt-8 bg-white/70 backdrop-blur-sm p-8 rounded-2xl shadow-lg">
-            <h2 className="font-heading text-2xl font-bold text-brand-deep-blue">Thank You!</h2>
-            <p className="mt-2 text-brand-deep-blue/80">You're on the waitlist. We'll let you know when VibeSpace is ready.</p>
-          </div>
-        ) : (
-          <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 space-y-4">
-            <p className="text-brand-deep-blue/80">Be the first to know when we launch.</p>
-            <div className="flex flex-col sm:flex-row gap-2">
+    <div className="min-h-screen bg-gradient-to-br from-brand-sand to-brand-sage text-brand-deep-blue">
+      <main className="container mx-auto max-w-4xl px-4 py-16 md:py-24">
+        {/* Hero Section */}
+        <div className="text-center">
+          <img src="/vibespace-logo-transparent-hardmask.png" alt="VibeSpace Logo" className="w-48 mx-auto mb-4" />
+          <h1 className="font-heading text-4xl md:text-6xl font-black leading-tight">A Social Space That Respects You.</h1>
+          <p className="mt-4 text-lg md:text-xl text-brand-deep-blue/80 max-w-2xl mx-auto">
+            Tired of algorithms, tracking, and performance? VibeSpace is a new social platform built on authentic connection and data privacy. Your feed, your rules.
+          </p>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="mt-8 max-w-md mx-auto flex items-start gap-2">
+            <div className="flex-1">
               <Input
-                id="email"
                 type="email"
                 placeholder="Enter your email"
+                className="w-full text-lg"
                 {...form.register('email')}
-                className="flex-grow"
               />
-              <Button type="submit" disabled={isSubmitting} className="bg-brand-deep-blue text-white hover:bg-brand-deep-blue/90">
-                {isSubmitting ? 'Joining...' : 'Join the Waitlist'}
-              </Button>
+              {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email.message}</p>}
             </div>
-            {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
+            <Button type="submit" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? 'Joining...' : 'Join the Waitlist'}
+            </Button>
           </form>
-        )}
-      </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="mt-24 md:mt-32">
+          <h2 className="text-center font-heading text-3xl font-bold">What makes us different?</h2>
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            
+            <div className="bg-white/30 p-8 rounded-2xl">
+              <HeartHandshake className="h-12 w-12 mx-auto text-brand-terracotta" />
+              <h3 className="font-heading text-xl font-bold mt-4">Authentic Expression</h3>
+              <p className="mt-2 text-brand-deep-blue/80">
+                Go beyond a simple 'like.' Share how you really feel with a spectrum of "Vibes" that capture the true energy of a post.
+              </p>
+            </div>
+
+            <div className="bg-white/30 p-8 rounded-2xl">
+              <Clock className="h-12 w-12 mx-auto text-brand-terracotta" />
+              <h3 className="font-heading text-xl font-bold mt-4">A Mindful Feed</h3>
+              <p className="mt-2 text-brand-deep-blue/80">
+                No endless scrolling. Our feed is chronological and broken into "Time Windows," creating a calmer, more intentional experience.
+              </p>
+            </div>
+
+            <div className="bg-white/30 p-8 rounded-2xl">
+              <ShieldCheck className="h-12 w-12 mx-auto text-brand-terracotta" />
+              <h3 className="font-heading text-xl font-bold mt-4">Your Privacy, Your Data</h3>
+              <p className="mt-2 text-brand-deep-blue/80">
+                We will never sell your data. VibeSpace is a place for connection, not a product to be sold. You are in control.
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
