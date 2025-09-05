@@ -72,7 +72,7 @@ const createPostRules = () => {
             .withMessage('is_public must be a boolean value (true or false).'),
         // Add validation for the new vibe channel tag
         body('vibe_channel_tag')
-            .optional()
+            .optional({ nullable: true, checkFalsy: true })
             .trim()
             .isString()
             .isLength({ min: 1, max: 50 })

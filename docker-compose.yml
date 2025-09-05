@@ -1,26 +1,60 @@
-version: '3.8'
-
 services:
-  minio:
-    image: minio/minio
-    container_name: vibespace_minio
-    hostname: minio  # Internal hostname
-    ports:
-      - "9000:9000"  # API port (for your backend)
-      - "9001:9001"  # Web console port
-    volumes:
-      - C:/minio/data:/data  # Persistent storage (adjust path as needed)
-      - C:/minio/config:/root/.minio  # Configuration
-    environment:
-      MINIO_ROOT_USER: corey              # Change these!
-      MINIO_ROOT_PASSWORD: Sandersco8891
-      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001  # For console
-    command: server /data --console-address ":9001"
+  # 1. The VibeSpace Backend API Service
+  vibespace-api:
+    build: .
+    container_name: vibespace_api
     restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
     networks:
       - vibespace_net
 
-  # Optional: Add a MinIO client for admin tasks
+  # 2. The PostgreSQL Database Service
+  db:
+    image: postgres:14-alpine
+    container_name: vibespace_db
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DATABASE}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DATABASE}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibespace_net
+
+  # 3. The MinIO S3-Compatible Storage Service
+  minio:
+    image: minio/minio
+    container_name: vibespace_minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
+    command: server /data --console-address ":9001"
+    networks:
+      - vibespace_net
+
+  # 4. MinIO Client to automatically create the bucket
   minio-client:
     image: minio/mc
     container_name: minio_client
@@ -31,13 +65,18 @@ services:
     entrypoint: >
       /bin/sh -c "
       sleep 5;
-      mc alias set local http://minio:9000 corey Sandersco8891;
-      mc mb local/vibespace-uploads;
-      mc anonymous set public local/vibespace-uploads;
-      echo 'MinIO ready!';
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY} ${S3_SECRET_KEY};
+      mc mb local/${S3_BUCKET} --ignore-existing;
+      mc policy set download local/${S3_BUCKET};
+      echo 'MinIO is ready!';
       tail -f /dev/null
       "
 
 networks:
   vibespace_net:
     driver: bridge
+
+volumes:
+  postgres_data:
+  minio_data:
+
