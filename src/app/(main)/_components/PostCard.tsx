@@ -1,124 +1,64 @@
-import { useSWRConfig } from 'swr';
-import api from '@/src/app/api';
-import { useAuthStore } from '../../store/authStore';
+'use client';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/app/components/ui/Avatar';
-import { Button } from '@/src/app/components/ui/Button';
-import { Card, CardContent, CardHeader } from '@/src/app/components/ui/Card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/src/app/components/ui/DropdownMenu';
-import { Heart, MoreHorizontal } from 'lucide-react';
-import { useState } from 'react';
+import { Card } from '@/src/app/components/ui/Card';
+import { MessageCircle, Repeat, Heart } from 'lucide-react';
 import Link from 'next/link';
 
-// Define the shape of a post object based on your API
-interface Post {
+// This is the interface that needs to be updated and exported.
+export interface Post {
   id: number;
-  user_id: number; // Check for ownership
+  user_id: number;
   username: string;
   profile_picture_url: string | null;
   content: string;
   created_at: string;
-  like_count: number;
-  has_liked: boolean;
+  vibe_counts: Record<string, number>; // ADDED: To hold vibe data
+  comment_count: number;
+  user_vibe: string | null; // ADDED: To hold the current user's vibe
 }
 
-export function PostCard({ post }: { post: Post }) {
-  const { mutate } = useSWRConfig();
-  const { user: currentUser } = useAuthStore();
-  const [isDeleting, setIsDeleting] = useState(false);
+interface PostCardProps {
+  post: Post;
+}
 
-  const handleLikeToggle = async () => {
-    // Optimistically update the UI
-    mutate(
-      '/posts',
-      (currentPosts: Post[] | undefined) => {
-        if (!currentPosts) return [];
-        return currentPosts.map((p) => {
-          if (p.id === post.id) {
-            return {
-              ...p,
-              has_liked: !p.has_liked,
-              like_count: p.has_liked ? p.like_count - 1 : p.like_count + 1,
-            };
-          }
-          return p;
-        });
-      },
-      false // Prevent revalidation immediately
-    );
-
-    // Send the request to the backend
-    try {
-      if (post.has_liked) {
-        await api.delete(`/posts/${post.id}/like`);
-      } else {
-        await api.post(`/posts/${post.id}/like`);
-      }
-    } catch (error) {
-      console.error('Failed to toggle like:', error);
-      // If the request fails, revalidate to get the correct state from the server
-      mutate('/posts');
-    }
-  };
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await api.delete(`/posts/${post.id}`);
-      mutate('/posts');
-    } catch (error) {
-      console.error('Failed to delete post:', error);
-      setIsDeleting(false);
-    }
-  };
-
-  const isAuthor = currentUser?.id === post.user_id;
-
+export function PostCard({ post }: PostCardProps) {
   return (
-    <Card className={`rounded-none border-x-0 border-t-0 border-b ${isDeleting ? 'opacity-50' : ''}`}>
-      <CardHeader className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex items-center space-x-4">
-            <Avatar>
-              <AvatarImage src={post.profile_picture_url ?? undefined} />
-              <AvatarFallback>{post.username.substring(0, 2).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="font-bold">{post.username}</p>
-              <p className="text-sm text-neutral-500">
-                {new Date(post.created_at).toLocaleString()}
-              </p>
+    <Card className="p-4">
+      <div className="flex space-x-3">
+        <Avatar>
+          <AvatarImage src={post.profile_picture_url || undefined} />
+          <AvatarFallback>{post.username.charAt(0).toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 space-y-1">
+          <div className="flex items-center justify-between">
+            <Link href={`/profile/${post.username}`} className="font-bold hover:underline">
+              {post.username}
+            </Link>
+            <p className="text-xs text-gray-500">
+              {new Date(post.created_at).toLocaleDateString()}
+            </p>
+          </div>
+          <p className="text-sm">{post.content}</p>
+          <div className="flex items-center space-x-8 pt-2">
+            <div className="flex items-center space-x-1 text-gray-500">
+              <MessageCircle className="h-4 w-4" />
+              <span>{post.comment_count}</span>
+            </div>
+            <div className="flex items-center space-x-1 text-gray-500">
+              <Repeat className="h-4 w-4" />
+              {/* Placeholder for revibes */}
+              <span>0</span>
+            </div>
+            <div className="flex items-center space-x-1 text-gray-500">
+              <Heart className="h-4 w-4" />
+              {/* A simple sum of all vibe counts */}
+              <span>{Object.values(post.vibe_counts || {}).reduce((a, b) => a + b, 0)}</span>
             </div>
           </div>
-          {isAuthor && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onClick={handleDelete} className="text-red-500 cursor-pointer">
-                  Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-      </CardHeader>
-      <Link href={`/posts/${post.id}`} className="cursor-pointer">
-      <CardContent className="p-4 pt-0">
-        <p className="text-foreground/90">{post.content}</p>
-      </CardContent>
-      </Link>
-        <div className="p-4 pt-0">
-        <div className="flex items-center">
-          <Button variant="ghost" size="sm" onClick={handleLikeToggle} className="flex items-center gap-2 text-neutral-500 hover:text-red-500">
-            <Heart className={`h-4 w-4 ${post.has_liked ? 'fill-red-500 text-red-500' : ''}`} />
-            {post.like_count}
-          </Button>
-          {/* Other buttons like comments go here */}
         </div>
       </div>
     </Card>
   );
 }
+

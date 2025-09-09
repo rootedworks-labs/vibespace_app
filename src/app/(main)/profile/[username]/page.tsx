@@ -2,43 +2,35 @@
 
 import useSWR from 'swr';
 import { useParams } from 'next/navigation';
-import api from '@/src/app/api';
+import { fetcher } from '@/src/app/api';
 import { ProfileHeader } from './_components/ProfileHeader';
-import { Spinner } from '@/src/app/components/ui/Spinner';
 import { UserPostFeed } from './_components/UserPostFeed';
-
-const fetcher = (url: string) => api.get(url).then((res) => res.data);
+import { Spinner } from '@/src/app/components/ui/Spinner';
 
 export default function ProfilePage() {
   const params = useParams();
   const username = params.username as string;
 
-  // We need an endpoint to fetch a user's public profile by username
-  // Let's assume it's GET /users/{username}
-  const { data: user, error, isLoading } = useSWR(`/users/${username}`, fetcher);
+  // Fetch the user's profile data from the correct endpoint
+  const { data: user, error } = useSWR(username ? `/users/${username}` : null, fetcher);
 
-  if (isLoading) {
+  if (error) {
+    return <div className="text-center text-red-500 py-10">Failed to load profile. Please try again later.</div>;
+  }
+
+  if (!user) {
     return (
-      <div className="flex justify-center mt-8">
-        <Spinner />
+      <div className="flex justify-center items-center py-20">
+        <Spinner className="h-10 w-10 text-brand-sage" />
       </div>
     );
   }
 
-  if (error || !user) {
-    return <div className="text-center mt-8">User not found.</div>;
-  }
-
   return (
-    <div>
-      {/* A placeholder for a cover image */}
-      <div className="h-48 bg-neutral-200" /> 
-      <div className="container mx-auto -mt-16 relative z-10">
-        <ProfileHeader user={user} />
-        <div className="mt-4">
-          <UserPostFeed username={user.username} />
-        </div>
-      </div>
+    <div className="container mx-auto max-w-3xl py-8 px-4 space-y-8">
+      <ProfileHeader user={user} />
+      <UserPostFeed username={username} />
     </div>
   );
 }
+

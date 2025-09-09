@@ -1,37 +1,22 @@
 'use client';
 
 import useSWR from 'swr';
-import api from '@/src/app/api';
-import { VibeCard } from '@/src/app/components/prototypes/VibeCard'; // Updated import
-import { PostCardSkeleton } from '../../../_components/PostCardSkeleton';
+import { fetcher } from '@/src/app/api';
+import { Post } from '@/src/app/(main)/_components/PostCard'; // Use the canonical Post type
+import { VibeCard } from '@/src/app/components/prototypes/VibeCard';
+import { PostCardSkeleton } from '@/src/app/(main)/_components/PostCardSkeleton';
+import { getTimeWindow } from '@/lib/utils';
+import { VibeType } from '@/src/app/components/prototypes/vibe-config';
 
-const fetcher = (url: string) => api.get(url).then(res => res.data);
-
-// Define a more accurate type for the Post object to match VibeCard props
-interface Post {
-  id: number;
-  author: string;
-  text: string;
-  timeWindow: 'Morning' | 'Afternoon' | 'Evening';
-  mediaUrl?: string;
-  mediaType?: 'image' | 'video';
-  vibeCounts: {
-    flow?: number;
-    joy?: number;
-    hype?: number;
-    warmth?: number;
-    glow?: number;
-    reflect?: number;
-    love?: number;
-  };
-}
+// Define VibeCounts to match the VibeCard's expected props
+type VibeCounts = Partial<Record<VibeType, number>>;
 
 interface UserPostFeedProps {
   username: string;
 }
 
 export function UserPostFeed({ username }: UserPostFeedProps) {
-  const { data: posts, error, isLoading } = useSWR<Post[]>(`/users/${username}/posts`, fetcher);
+  const { data: posts, error, isLoading } = useSWR<Post[]>(`/api/users/${username}/posts`, fetcher);
 
   if (isLoading) {
     return (
@@ -43,14 +28,14 @@ export function UserPostFeed({ username }: UserPostFeedProps) {
   }
 
   if (error || !posts) {
-    return <div className="text-center p-8">Could not load posts.</div>;
+    return <div className="text-center p-8">Could not load this user's posts.</div>;
   }
 
   if (posts.length === 0) {
     return (
       <div className="text-center p-12 border-t">
         <h3 className="font-bold font-heading">No Posts Yet</h3>
-        <p className="mt-2 text-sm text-neutral-500">This user hasn't posted anything.</p>
+        <p className="mt-2 text-sm text-neutral-500">This user hasn't shared any vibes.</p>
       </div>
     );
   }
@@ -58,8 +43,24 @@ export function UserPostFeed({ username }: UserPostFeedProps) {
   return (
     <div className="flex flex-col items-center space-y-4 py-4">
       {posts.map((post) => (
-        <VibeCard key={post.id} {...post} />
+        <VibeCard 
+          key={post.id}
+          id={post.id}
+          // Adapt the author data to the object format VibeCard expects
+          author={{ 
+            name: post.username, 
+            avatarUrl: post.profile_picture_url || undefined 
+          }}
+          text={post.content}
+          timeWindow={getTimeWindow(post.created_at)} // Convert timestamp to time window
+          vibeCounts={post.vibe_counts as VibeCounts}
+          userVibe={post.user_vibe as VibeType | undefined}
+          // Media fields will be handled in a future step
+          mediaUrl={undefined} 
+          mediaType={undefined}
+        />
       ))}
     </div>
   );
 }
+

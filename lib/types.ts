@@ -1,0 +1,15 @@
+export interface User {
+  id: string;
+  username: string;
+
+  profile_picture_url: string | null;
+}
+
+export interface Notification {
+  id: string;
+  actor: User;
+  type: 'VIBE' | 'COMMENT' | 'FOLLOW';
+  post_id?: string;
+  read: boolean;
+  created_at: string;
+}

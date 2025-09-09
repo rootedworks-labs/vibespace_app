@@ -1,47 +1,43 @@
 'use client';
 
 import useSWR from 'swr';
-import api from '@/src/app/api';
-import { VibeCard } from '@/src/app/components/prototypes/VibeCard';
-import { PostCardSkeleton } from '../../../_components/PostCardSkeleton';
-
-const fetcher = (url: string) => api.get(url).then(res => res.data);
+import { fetcher } from '@/src/app/api';
+import { PostCard, Post } from '@/src/app/(main)/_components/PostCard'; // Import the Post type from PostCard
+import { Spinner } from '@/src/app/components/ui/Spinner';
+import { PostCardSkeleton } from '@/src/app/(main)/_components/PostCardSkeleton';
 
 interface VibeChannelFeedProps {
   vibeType: string;
 }
 
 export function VibeChannelFeed({ vibeType }: VibeChannelFeedProps) {
-  // We'll use the /posts endpoint with a query parameter as defined in the spec
-  const { data: posts, error, isLoading } = useSWR(`/posts?vibe_channel_tag=${vibeType}`, fetcher);
-
-  if (isLoading) {
-    return (
-      <div>
-        <PostCardSkeleton />
-        <PostCardSkeleton />
-      </div>
-    );
-  }
+  // Use the imported Post type for SWR
+  const { data: posts, error } = useSWR<Post[]>(`/api/posts/channel/${vibeType}`, fetcher);
 
   if (error) {
-    return <div className="text-center p-8">Could not load this Vibe Channel.</div>;
+    return <p className="text-center text-red-500">Failed to load posts for this vibe.</p>;
   }
 
-  if (!posts || posts.length === 0) {
+  if (!posts) {
     return (
-      <div className="text-center p-12">
-        <h3 className="font-bold font-heading">This Channel is Quiet</h3>
-        <p className="mt-2 text-sm text-neutral-500">Be the first to post in the #{vibeType} channel!</p>
+      <div className="space-y-4">
+        <PostCardSkeleton />
+        <PostCardSkeleton />
+        <PostCardSkeleton />
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 p-4">
-      {posts.map((post: any) => (
-        <VibeCard key={post.id} {...post} />
-      ))}
+    <div className="space-y-4">
+      {posts.length === 0 ? (
+        <p className="text-center text-neutral-500 py-8">
+          No vibes have been shared in this channel yet.
+        </p>
+      ) : (
+        posts.map((post) => <PostCard key={post.id} post={post} />)
+      )}
     </div>
   );
 }
+

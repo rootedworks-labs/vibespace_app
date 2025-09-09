@@ -1,4 +1,3 @@
-// src/app/components/prototypes/VibeCard.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -27,13 +26,16 @@ type VibeCounts = {
 
 interface VibeCardProps {
   id: number;
-  author: string;
-  avatarUrl?: string;
+  author: {
+      name: string;
+      avatarUrl?: string;
+  };
   timeWindow: 'Morning' | 'Afternoon' | 'Evening';
   text?: string;
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
   vibeCounts: VibeCounts;
+  userVibe?: string | null; // ADDED: The user's current vibe on this post
 }
 
 // Helper to get the gradient based on the time window
@@ -63,20 +65,21 @@ const getGlowClass = (window: VibeCardProps['timeWindow']) => {
     }
 }
 
-export function VibeCard({ id, author, avatarUrl, timeWindow, text, mediaUrl, mediaType, vibeCounts }: VibeCardProps) {
+export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vibeCounts, userVibe }: VibeCardProps) {
   const gradient = getWindowGradient(timeWindow);
   const glow = getGlowClass(timeWindow);
   const [localVibeCounts, setLocalVibeCounts] = useState(vibeCounts);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [currentUserVibe, setCurrentUserVibe] = useState<string | null>(null);
+  // MODIFIED: Initialize state with the userVibe prop
+  const [currentUserVibe, setCurrentUserVibe] = useState<string | null>(userVibe || null);
 
   const { mutate } = useSWRConfig();
 
-  // This effect now correctly syncs state when the story changes, but not on interaction.
+  // MODIFIED: Sync state when props change
   useEffect(() => {
     setLocalVibeCounts(vibeCounts);
-    setCurrentUserVibe(null);
-  }, [id]); // Depend on the post ID, which is stable within a story.
+    setCurrentUserVibe(userVibe || null);
+  }, [id, vibeCounts, userVibe]); 
 
   const handleVibeSelect = async (vibeType: string) => {
     const originalVibeCounts = { ...localVibeCounts };
@@ -129,11 +132,11 @@ export function VibeCard({ id, author, avatarUrl, timeWindow, text, mediaUrl, me
       <div className="p-6">
         <div className="flex items-center space-x-4">
           <Avatar>
-            <AvatarImage src={avatarUrl} />
-            <AvatarFallback>{author?.substring(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={author.avatarUrl} /> 
+            <AvatarFallback>{author.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-bold font-heading">{author}</p>
+            <p className="font-bold font-heading">{author.name}</p>
             <p className="text-sm text-neutral-500">{timeWindow} Vibe</p>
           </div>
         </div>
@@ -141,7 +144,7 @@ export function VibeCard({ id, author, avatarUrl, timeWindow, text, mediaUrl, me
 
       {/* Media or Text Content */}
       {mediaUrl && mediaType === 'image' && (
-        <img src={mediaUrl} alt={`Vibe from ${author}`} className="w-full h-auto object-cover" />
+        <img src={mediaUrl} alt={`Vibe from ${author.name}`} className="w-full h-auto object-cover" />
       )}
       {mediaUrl && mediaType === 'video' && (
         <video src={mediaUrl} controls autoPlay muted loop className="w-full h-auto" />

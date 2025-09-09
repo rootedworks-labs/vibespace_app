@@ -23,8 +23,8 @@ export default function LandingPage() {
 
   if (isCheckingAuth) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Spinner className="h-10 w-10 text-brand-sage" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+        <Spinner className="h-12 w-12" />
       </div>
     );
   }

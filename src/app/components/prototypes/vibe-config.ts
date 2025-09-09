@@ -46,3 +46,7 @@ export const vibeConfig = {
     dotColor: 'bg-vibe-love'
   },
 };
+
+// Add this line to create and export the VibeType from the keys of the config object.
+export type VibeType = keyof typeof vibeConfig;
+
