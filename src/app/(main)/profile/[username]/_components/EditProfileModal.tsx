@@ -22,11 +22,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/app/components/ui/Avatar';
 import { useAuthStore } from '@/src/app/store/authStore';
 
-// 1. Define the validation schema for the profile form
+// 1. Update the validation schema to use 'website_url'
 const profileFormSchema = z.object({
   username: z.string().min(3, { message: 'Username must be at least 3 characters.' }),
   bio: z.string().max(200, { message: 'Bio cannot exceed 200 characters.' }).nullable(),
-  website: z.string().url({ message: 'Please enter a valid URL.' }).or(z.literal('')).nullable(),
+  website_url: z.string().url({ message: 'Please enter a valid URL.' }).or(z.literal('')).nullable(),
 });
 
 export function EditProfileModal({ user }: { user: any }) {
@@ -34,30 +34,28 @@ export function EditProfileModal({ user }: { user: any }) {
   const { user: currentUser, login } = useAuthStore();
   const [open, setOpen] = useState(false);
 
-  // Avatar state remains the same
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user.profile_picture_url);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 2. Set up react-hook-form
+  // 2. Set up react-hook-form with the updated schema and default values
   const form = useForm<z.infer<typeof profileFormSchema>>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       username: user.username || '',
       bio: user.bio || '',
-      website: user.website || '',
+      website_url: user.website_url || '',
     },
   });
   
   const { isSubmitting, errors } = form.formState;
 
-  // Reset form to initial values when the modal is opened
   useEffect(() => {
     if (open) {
       form.reset({
         username: user.username || '',
         bio: user.bio || '',
-        website: user.website || '',
+        website_url: user.website_url || '',
       });
       setAvatarPreview(user.profile_picture_url);
       setAvatarFile(null);
@@ -72,7 +70,7 @@ export function EditProfileModal({ user }: { user: any }) {
     }
   };
 
-  // 3. Create the onSubmit handler that receives validated form data
+  // The 'values' object passed to onSubmit will now have the correct shape
   const onSubmit = async (values: z.infer<typeof profileFormSchema>) => {
     const toastId = toast.loading('Updating profile...');
     let newAvatarUrl = user.profile_picture_url;
@@ -87,6 +85,7 @@ export function EditProfileModal({ user }: { user: any }) {
         newAvatarUrl = response.data.profile_picture_url;
       }
 
+      // The 'values' object now correctly contains 'website_url' for the API call
       await api.patch('/users/me', values);
 
       if (currentUser) {
@@ -115,7 +114,6 @@ export function EditProfileModal({ user }: { user: any }) {
         <ModalHeader>
           <ModalTitle>Edit Your Profile</ModalTitle>
         </ModalHeader>
-        {/* 4. Connect the form and its fields */}
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <div className="space-y-4 py-4">
             <div className="flex flex-col items-center space-y-2">
@@ -135,10 +133,11 @@ export function EditProfileModal({ user }: { user: any }) {
               <Textarea id="bio" {...form.register('bio')} />
               {errors.bio && <p className="text-sm text-red-500">{errors.bio.message}</p>}
             </div>
+            {/* 3. Update the JSX to register 'website_url' */}
             <div className="space-y-1">
-              <label htmlFor="website">Website</label>
-              <Input id="website" placeholder="https://your.website" {...form.register('website')} />
-              {errors.website && <p className="text-sm text-red-500">{errors.website.message}</p>}
+              <label htmlFor="website_url">Website</label>
+              <Input id="website_url" placeholder="https://your.website" {...form.register('website_url')} />
+              {errors.website_url && <p className="text-sm text-red-500">{errors.website_url.message}</p>}
             </div>
           </div>
           <div className="flex justify-end gap-2">
@@ -152,3 +151,4 @@ export function EditProfileModal({ user }: { user: any }) {
     </Modal>
   );
 }
+

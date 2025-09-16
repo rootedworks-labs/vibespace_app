@@ -2,71 +2,62 @@
 
 import useSWR from 'swr';
 import { useParams } from 'next/navigation';
-import api from '@/src/app/api';
-import { VibeCard } from '@/src/app/components/prototypes/VibeCard'; // Updated import
-import { PostCardSkeleton } from '../../_components/PostCardSkeleton';
-import { Navbar } from '@/src/app/components/Navbar';
-import { ArrowLeft } from 'lucide-react';
+import { fetcher } from '@/src/app/api';
+import { Post } from '@/src/app/(main)/_components/PostCard'; // Use the canonical Post type
+import { VibeCard } from '@/src/app/components/prototypes/VibeCard';
+import { PostCardSkeleton } from '@/src/app/(main)/_components/PostCardSkeleton';
+import { getTimeWindow } from '@/lib/utils';
+import { VibeType } from '@/src/app/components/prototypes/vibe-config';
 import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 import { CommentThread } from './_components/CommentThread';
 import { CreateCommentForm } from './_components/CreateCommentForm';
 
-const fetcher = (url: string) => api.get(url).then((res) => res.data);
-
-// Define the Post type to match the VibeCard's props
-interface Post {
-  id: number;
-  author: string;
-  text: string;
-  timeWindow: 'Morning' | 'Afternoon' | 'Evening';
-  mediaUrl?: string;
-  mediaType?: 'image' | 'video';
-  vibeCounts: {
-    flow?: number;
-    joy?: number;
-    hype?: number;
-    warmth?: number;
-    glow?: number;
-    reflect?: number;
-    love?: number;
-  };
-}
+// Define VibeCounts to match the VibeCard's expected props
+type VibeCounts = Partial<Record<VibeType, number>>;
 
 export default function SinglePostPage() {
   const params = useParams();
   const postId = params.postId as string;
 
-  const { data: post, error, isLoading } = useSWR<Post>(`/posts/${postId}`, fetcher);
+  const { data: post, error, isLoading } = useSWR<Post>(postId ? `/posts/${postId}` : null, fetcher);
 
   return (
-    <>
-      <Navbar />
-      <div className="container mx-auto max-w-2xl">
-        <div className="p-4 border-b">
-          <Link href="/" className="flex items-center gap-2 text-sm font-bold hover:underline">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Feed
-          </Link>
-        </div>
-
-        {isLoading && <PostCardSkeleton />}
-        {error && <div className="p-8 text-center">Post not found or could not be loaded.</div>}
-        
-        {post && (
-          <div className="flex justify-center py-4">
-            <VibeCard {...post} />
-          </div>
-        )}
-        
-        {/* Render the comment section */}
-        {post && (
-          <>
-            <CreateCommentForm postId={postId} />
-            <CommentThread postId={postId} />
-          </>
-        )}
+    <div className="container mx-auto max-w-2xl py-8 px-4">
+      <div className="mb-4">
+        <Link href="/feed" className="flex items-center gap-2 text-sm font-bold hover:underline text-neutral-600">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Feed
+        </Link>
       </div>
-    </>
+
+      {isLoading && <PostCardSkeleton />}
+      {error && <div className="p-8 text-center text-red-500">Post not found or could not be loaded.</div>}
+      
+      {post && (
+        <div className="flex flex-col items-center space-y-8">
+          <VibeCard 
+            key={post.id}
+            id={post.id}
+            author={{ 
+              name: post.username, 
+              avatarUrl: post.profile_picture_url || undefined 
+            }}
+            text={post.content}
+            timeWindow={getTimeWindow(post.created_at)}
+            vibeCounts={post.vibe_counts as VibeCounts}
+            userVibe={post.user_vibe as VibeType | undefined}
+            mediaUrl={undefined} 
+            mediaType={undefined}
+          />
+          <div className="w-full border-t pt-8">
+            <h2 className="text-2xl font-bold font-heading mb-4">Vibes & Replies</h2>
+            <CreateCommentForm postId={post.id.toString()} />
+            <CommentThread postId={post.id.toString()} />
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

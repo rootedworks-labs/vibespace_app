@@ -3,8 +3,8 @@
 import { useEffect } from 'react';
 import useSWR from 'swr';
 import { Notification } from '@/lib/types';
-import { fetcher } from '@/src/app/api'; // Import the global fetcher again
-import NotificationCard from './NotificationCard';
+import { fetcher } from '@/src/app/api';
+import NotificationCard from '@/src/app/(main)/notifications/_components/NotificationCard';
 import { Spinner } from '@/src/app/components/ui/Spinner';
 import { useAuthStore } from '@/src/app/store/authStore';
 
@@ -18,8 +18,9 @@ export default function NotificationList() {
   useEffect(() => {
     if (!accessToken) return;
 
+    // Updated WebSocket URL to match the backend documentation
     const wsUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')
-      .replace('http', 'ws') + `?token=${accessToken}`;
+      .replace('http', 'ws') + `/notifications/ws?token=${accessToken}`;
       
     const ws = new WebSocket(wsUrl);
 

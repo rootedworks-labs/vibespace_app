@@ -13,3 +13,11 @@ export interface Notification {
   read: boolean;
   created_at: string;
 }
+
+// Defines a conversation for the direct messaging feature
+export interface Conversation {
+  id: number;
+  user: User;
+  lastMessage: string;
+  timestamp: string;
+}

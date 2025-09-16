@@ -16,7 +16,7 @@ interface UserPostFeedProps {
 }
 
 export function UserPostFeed({ username }: UserPostFeedProps) {
-  const { data: posts, error, isLoading } = useSWR<Post[]>(`/api/users/${username}/posts`, fetcher);
+  const { data: posts, error, isLoading } = useSWR<Post[]>(`/users/${username}/posts`, fetcher);
 
   if (isLoading) {
     return (

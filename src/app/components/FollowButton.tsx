@@ -1,41 +1,52 @@
 'use client';
 
 import { useState } from 'react';
-import { useSWRConfig } from 'swr';
+import { Button } from '@/src/app/components/ui/Button'; // Corrected import path
 import api from '@/src/app/api';
-import { Button } from './ui/Button';
+import toast from 'react-hot-toast';
 
 interface FollowButtonProps {
-  username: string;
-  initialIsFollowing: boolean;
+  userId: number;
+  isFollowing: boolean;
 }
 
-export function FollowButton({ username, initialIsFollowing }: FollowButtonProps) {
+export function FollowButton({ userId, isFollowing: initialIsFollowing }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
-  const { mutate } = useSWRConfig();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleToggleFollow = async () => {
-    // Optimistic update for a fast UI response
+  const handleFollowToggle = async () => {
+    setIsLoading(true);
+    const originalFollowState = isFollowing;
+
+    // Optimistic UI update
     setIsFollowing(!isFollowing);
 
     try {
-      if (isFollowing) {
-        await api.delete(`/users/${username}/follow`);
+      if (originalFollowState) {
+        // If currently following, send unfollow request
+        await api.delete(`/api/users/${userId}/follow`);
       } else {
-        await api.post(`/users/${username}/follow`);
+        // If not following, send follow request
+        await api.post(`/api/users/${userId}/follow`);
       }
-      // Re-fetch the profile data to update follow counts
-      mutate(`/users/${username}`);
+      // In a real app, you would likely revalidate SWR caches here
     } catch (error) {
-      console.error('Failed to toggle follow:', error);
-      // Revert the UI on error
-      setIsFollowing(initialIsFollowing);
+      toast.error('Something went wrong. Please try again.');
+      // Revert UI on error
+      setIsFollowing(originalFollowState);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <Button onClick={handleToggleFollow} variant={isFollowing ? 'secondary' : 'default'}>
-      {isFollowing ? 'Unfollow' : 'Follow'}
+    <Button
+      variant={isFollowing ? 'outline' : 'default'}
+      onClick={handleFollowToggle}
+      disabled={isLoading}
+    >
+      {isLoading ? '...' : isFollowing ? 'Unfollow' : 'Follow'}
     </Button>
   );
 }
+

@@ -56,7 +56,7 @@ export function CreatePostForm() {
   const attemptSubmit = async () => {
     const data = form.getValues();
     const formData = new FormData();
-    formData.append('text', data.text);
+    formData.append('content', data.text);
     if (data.vibeChannel) formData.append('vibe_channel_tag', data.vibeChannel);
     if (file) formData.append('media', file);
 

@@ -10,8 +10,12 @@ import { EnergyStream } from './EnergyStream';
 import { VibeSelector } from './VibeSelector';
 import { Button } from '../ui/Button';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/Popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/DropdownMenu';
 import { Icon } from '@iconify/react';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/src/app/store/authStore';
+import { MessageCircle, MoreHorizontal } from 'lucide-react';
+import Link from 'next/link';
 
 
 type VibeCounts = {
@@ -26,6 +30,7 @@ type VibeCounts = {
 
 interface VibeCardProps {
   id: number;
+  user_id: number; 
   author: {
       name: string;
       avatarUrl?: string;
@@ -35,7 +40,8 @@ interface VibeCardProps {
   mediaUrl?: string;
   mediaType?: 'image' | 'video';
   vibeCounts: VibeCounts;
-  userVibe?: string | null; // ADDED: The user's current vibe on this post
+  userVibe?: string | null;
+  comment_count: number;
 }
 
 // Helper to get the gradient based on the time window
@@ -65,17 +71,18 @@ const getGlowClass = (window: VibeCardProps['timeWindow']) => {
     }
 }
 
-export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vibeCounts, userVibe }: VibeCardProps) {
+export function VibeCard({ id, user_id, author, timeWindow, text, mediaUrl, mediaType, vibeCounts, userVibe, comment_count }: VibeCardProps) {
   const gradient = getWindowGradient(timeWindow);
   const glow = getGlowClass(timeWindow);
   const [localVibeCounts, setLocalVibeCounts] = useState(vibeCounts);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  // MODIFIED: Initialize state with the userVibe prop
   const [currentUserVibe, setCurrentUserVibe] = useState<string | null>(userVibe || null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  const { user: currentUser } = useAuthStore();
   const { mutate } = useSWRConfig();
+  const isAuthor = currentUser?.id === user_id;
 
-  // MODIFIED: Sync state when props change
   useEffect(() => {
     setLocalVibeCounts(vibeCounts);
     setCurrentUserVibe(userVibe || null);
@@ -85,7 +92,6 @@ export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vi
     const originalVibeCounts = { ...localVibeCounts };
     const originalUserVibe = currentUserVibe;
 
-    // Optimistic UI Update
     setLocalVibeCounts(prevCounts => {
       const newCounts = { ...prevCounts };
       if (currentUserVibe) {
@@ -101,23 +107,32 @@ export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vi
     });
     setIsPopoverOpen(false);
 
-    // API Call
-    // try {
-    //   if (originalUserVibe === vibeType) {
-    //     // User is removing their vibe
-    //     await api.delete(`/posts/${id}/vibe`);
-    //   } else {
-    //     // User is adding or changing their vibe
-    //     await api.post(`/posts/${id}/vibe`, { vibe_type: vibeType });
-    //   }
-    //   // Revalidate the feed to get the latest data from the server
-    //   mutate('/feed');
-    // } catch (error) {
-    //   toast.error("Could not save your vibe. Please try again.");
-    //   // Revert the UI on error
-    //   setLocalVibeCounts(originalVibeCounts);
-    //   setCurrentUserVibe(originalUserVibe);
-    // }
+    try {
+      if (originalUserVibe === vibeType) {
+        // CORRECTED: Changed 'vibe' to 'vibes'
+        await api.delete(`/posts/${id}/vibes`);
+      } else {
+        // CORRECTED: Changed 'vibe' to 'vibes'
+        await api.post(`/posts/${id}/vibes`, { vibeType: vibeType });
+      }
+      mutate(`/api/feed?time_window=${timeWindow.toLowerCase()}`);
+    } catch (error) {
+      toast.error("Could not save your vibe. Please try again.");
+      setLocalVibeCounts(originalVibeCounts);
+      setCurrentUserVibe(originalUserVibe);
+    }
+  };
+  
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await api.delete(`/posts/${id}`);
+      toast.success('Your vibe has been deleted.');
+      mutate(`/feed?time_window=${timeWindow.toLowerCase()}`);
+    } catch (error) {
+      toast.error('Failed to delete vibe. Please try again.');
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -125,51 +140,76 @@ export function VibeCard({ id, author, timeWindow, text, mediaUrl, mediaType, vi
       className={cn(
        'w-[28rem] rounded-2xl shadow-lg bg-gradient-to-br border border-white/50 overflow-hidden',
         gradient,
-        glow
+        glow,
+        isDeleting && 'opacity-50 pointer-events-none'
       )}
     >
       {/* Header */}
       <div className="p-6">
-        <div className="flex items-center space-x-4">
-          <Avatar>
-            <AvatarImage src={author.avatarUrl} /> 
-            <AvatarFallback>{author.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-bold font-heading">{author.name}</p>
-            <p className="text-sm text-neutral-500">{timeWindow} Vibe</p>
+        <div className="flex items-center justify-between space-x-4">
+          <div className="flex items-center space-x-4">
+            <Avatar>
+              <AvatarImage src={author.avatarUrl} /> 
+              <AvatarFallback>{author.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-bold font-heading">{author.name}</p>
+              <p className="text-sm text-neutral-500">{timeWindow} Vibe</p>
+            </div>
           </div>
+          {isAuthor && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleDelete} className="text-red-500 cursor-pointer">
+                  Delete Vibe
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
 
-      {/* Media or Text Content */}
-      {mediaUrl && mediaType === 'image' && (
-        <img src={mediaUrl} alt={`Vibe from ${author.name}`} className="w-full h-auto object-cover" />
-      )}
-      {mediaUrl && mediaType === 'video' && (
-        <video src={mediaUrl} controls autoPlay muted loop className="w-full h-auto" />
-      )}
-      {text && (
-        <div className="px-6">
-          <p className="text-foreground/90">{text}</p>
-        </div>
-      )}
+      <Link href={`/posts/${id}`} className="cursor-pointer block">
+        {mediaUrl && mediaType === 'image' && (
+          <img src={mediaUrl} alt={`Vibe from ${author.name}`} className="w-full h-auto object-cover" />
+        )}
+        {mediaUrl && mediaType === 'video' && (
+          <video src={mediaUrl} controls autoPlay muted loop className="w-full h-auto" />
+        )}
+        {text && (
+          <div className="px-6">
+            <p className="text-foreground/90">{text}</p>
+          </div>
+        )}
+      </Link>
 
-      {/* Footer with EnergyStream and VibeSelector */}
+      {/* Footer */}
       <div className="p-6 mt-2">
         <div className="border-t border-black/10 pt-4 flex items-center justify-between">
           <EnergyStream vibeCounts={localVibeCounts} />
           
-          <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" className="rounded-full">
-                <Icon icon="ph:spiral-light" className="h-7 w-7" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 border-none shadow-none bg-transparent">
-              <VibeSelector onVibeSelect={handleVibeSelect} timeWindow={timeWindow}/>
-            </PopoverContent>
-          </Popover>
+          <div className="flex items-center gap-4">
+            <Link href={`/posts/${id}`} className="flex items-center gap-2 text-neutral-500 hover:text-brand-deep-blue transition-colors">
+              <MessageCircle className="h-6 w-6" />
+              <span className="font-semibold">{comment_count}</span>
+            </Link>
+
+            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" className="rounded-full">
+                  <Icon icon="ph:spiral-light" className="h-7 w-7" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 border-none shadow-none bg-transparent">
+                <VibeSelector onVibeSelect={handleVibeSelect} timeWindow={timeWindow}/>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
     </div>

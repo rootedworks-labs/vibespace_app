@@ -3,11 +3,13 @@
 import { useAuthStore } from '@/src/app/store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/app/components/ui/Avatar';
 import { Button } from '@/src/app/components/ui/Button';
-import { ProfileAura } from './ProfileAura';
+import { ProfileAura } from '@/src/app/components/prototypes/ProfileAura'; // Using your existing prototype
 import { VibeType } from '@/src/app/components/prototypes/vibe-config';
+import { FollowButton } from '@/src/app/components/FollowButton';
 
-// Define the shape of the user data this component expects
-interface UserProfile {
+// This defines the complete user profile data the header now expects.
+export interface UserProfile {
+  id: number;
   username: string;
   bio: string | null;
   profile_picture_url: string | null;
@@ -15,6 +17,7 @@ interface UserProfile {
   follower_count: number;
   following_count: number;
   dominant_vibe: VibeType | null;
+  is_following: boolean;
 }
 
 interface ProfileHeaderProps {
@@ -23,7 +26,7 @@ interface ProfileHeaderProps {
 
 export function ProfileHeader({ user }: ProfileHeaderProps) {
   const { user: currentUser } = useAuthStore();
-  const isCurrentUser = currentUser?.username === user.username;
+  const isCurrentUser = currentUser?.id === user.id;
 
   return (
     <div className="flex flex-col items-center gap-6 rounded-2xl bg-white/50 dark:bg-neutral-800/20 backdrop-blur-lg p-6 md:p-8 border border-white/30 shadow-lg">
@@ -56,9 +59,11 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
           <p className="text-sm text-neutral-500">Following</p>
         </div>
       </div>
-
-      {isCurrentUser && (
+      
+      {isCurrentUser ? (
         <Button variant="outline">Edit Profile</Button>
+      ) : (
+        <FollowButton userId={user.id} isFollowing={user.is_following} />
       )}
     </div>
   );
