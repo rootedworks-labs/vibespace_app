@@ -42,24 +42,25 @@ export function UserPostFeed({ username }: UserPostFeedProps) {
 
   return (
     <div className="flex flex-col items-center space-y-4 py-4">
-      {posts.map((post) => (
-        <VibeCard 
-          key={post.id}
-          id={post.id}
-          // Adapt the author data to the object format VibeCard expects
-          author={{ 
-            name: post.username, 
-            avatarUrl: post.profile_picture_url || undefined 
-          }}
-          text={post.content}
-          timeWindow={getTimeWindow(post.created_at)} // Convert timestamp to time window
-          vibeCounts={post.vibe_counts as VibeCounts}
-          userVibe={post.user_vibe as VibeType | undefined}
-          // Media fields will be handled in a future step
-          mediaUrl={undefined} 
-          mediaType={undefined}
-        />
-      ))}
+      {posts?.map((post) => (
+              <VibeCard 
+                key={post.id}
+                id={post.id}
+                user_id={post.user_id}
+                author={{ 
+                  name: post.username, 
+                  avatarUrl: post.profile_picture_url || undefined 
+                }}
+                text={post.content}
+                timeWindow={getTimeWindow(post.created_at)}
+                vibeCounts={post.vibe_counts as VibeCounts}
+                comment_count={post.comment_count}
+                // The VibeCard does not use userVibe, so we omit it.
+                // The card handles its own internal vibe state.
+                mediaUrl={undefined} 
+                mediaType={undefined}
+              />
+            ))}
     </div>
   );
 }

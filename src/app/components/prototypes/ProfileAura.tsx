@@ -9,23 +9,32 @@ interface ProfileAuraProps {
 }
 
 const auraGradients: Record<keyof typeof vibeConfig, string> = {
-  flow: 'from-vibe-flow/40 to-transparent',
-  joy: 'from-vibe-joy/40 to-transparent',
-  hype: 'from-vibe-hype/40 to-transparent',
-  warmth: 'from-vibe-warmth/40 to-transparent',
-  glow: 'from-vibe-glow/40 to-transparent',
-  reflect: 'from-vibe-reflect/40 to-transparent',
-  love: 'from-vibe-love/40 to-transparent', // Corrected typo from v-love
+  flow: 'from-vibe-flow to-transparent',
+  joy: 'from-vibe-joy to-transparent',
+  hype: 'from-vibe-hype to-transparent',
+  warmth: 'from-vibe-warmth to-transparent',
+  glow: 'from-vibe-glow to-transparent',
+  reflect: 'from-vibe-reflect to-transparent',
+  love: 'from-vibe-love to-transparent', // Corrected typo from v-love
 };
 
+// const auraGradients: Record<string, string> = {
+//   flow: 'from-[rgb(var(--color-vibe-flow))] to-transparent',
+//   joy: 'from-[rgb(var(--color-vibe-joy))]/60 to-transparent',
+//   hype: 'from-[rgb(var(--color-vibe-hype))]/60 to-transparent',
+//   warmth: 'from-[rgb(var(--color-vibe-warmth))]/60 to-transparent',
+//   glow: 'from-[rgb(var(--color-vibe-glow))]/60 to-transparent',
+//   love: 'from-[rgb(var(--color-vibe-love))]/60 to-transparent',
+//   reflect: 'from-[rgb(var(--color-vibe-reflect))]/60 to-transparent',
+// };
 const sizeClasses = {
-  sm: 'blur-lg',
+  sm: 'blur-md',
   default: 'blur-2xl',
   lg: 'blur-3xl',
 };
 
 
-export function ProfileAura({ dominantVibe, size = 'default' }: ProfileAuraProps) {
+export function ProfileAura({ dominantVibe, size = 'sm' }: ProfileAuraProps) {
   if (!dominantVibe) return null;
   
   const gradientClass = auraGradients[dominantVibe] || 'from-neutral-400/20 to-transparent';
@@ -38,6 +47,7 @@ export function ProfileAura({ dominantVibe, size = 'default' }: ProfileAuraProps
         'animate-pulse-slow', // Use the new, slower animation class
         gradientClass,
         blurClass
+        
       )}
     />
   );

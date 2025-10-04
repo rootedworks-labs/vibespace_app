@@ -6,13 +6,13 @@ interface ProfileAuraProps {
 }
 
 const vibeGradients: Record<VibeType, string> = {
-  flow: 'from-vibe-flow/40 to-transparent',
-  joy: 'from-vibe-joy/40 to-transparent',
-  hype: 'from-vibe-hype/40 to-transparent',
-  warmth: 'from-vibe-warmth/40 to-transparent',
-  glow: 'from-vibe-glow/40 to-transparent',
-  love: 'from-vibe-love/40 to-transparent',
-  reflect: 'from-vibe-reflect/40 to-transparent',
+  flow: 'from-vibe-flow to-transparent',
+  joy: 'from-vibe-joy to-transparent',
+  hype: 'from-vibe-hype to-transparent',
+  warmth: 'from-vibe-warmth to-transparent',
+  glow: 'from-vibe-glow to-transparent',
+  love: 'from-vibe-love to-transparent',
+  reflect: 'from-vibe-reflect to-transparent',
 };
 
 export function ProfileAura({ dominantVibe }: ProfileAuraProps) {

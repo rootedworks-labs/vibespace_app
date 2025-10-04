@@ -47,6 +47,7 @@ export function PostFeed({ timeWindow }: { timeWindow: TimeWindow }) {
         <VibeCard 
           key={post.id}
           id={post.id}
+          user_id={post.user_id}
           author={{ 
             name: post.username, 
             avatarUrl: post.profile_picture_url || undefined 
@@ -54,6 +55,7 @@ export function PostFeed({ timeWindow }: { timeWindow: TimeWindow }) {
           text={post.content}
           timeWindow={getTimeWindow(post.created_at)}
           vibeCounts={post.vibe_counts as VibeCounts}
+          comment_count={post.comment_count}
           // The VibeCard does not use userVibe, so we omit it.
           // The card handles its own internal vibe state.
           mediaUrl={undefined} 

@@ -8,7 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 // Add this new function to convert a date string to a time window
 export const getTimeWindow = (dateString: string): 'Morning' | 'Afternoon' | 'Evening' => {
   const date = new Date(dateString);
-  const hour = date.getHours();
+  const hour = date.getUTCHours();
 
   if (hour >= 5 && hour < 12) {
     return 'Morning';

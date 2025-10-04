@@ -14,7 +14,7 @@ export interface UserProfile {
   bio: string | null;
   profile_picture_url: string | null;
   post_count: number;
-  follower_count: number;
+  followers_count: number;
   following_count: number;
   dominant_vibe: VibeType | null;
   is_following: boolean;
@@ -47,11 +47,11 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
 
       <div className="flex items-center gap-8 text-center">
         <div>
-          <p className="text-2xl font-bold text-brand-deep-blue">{user.post_count}</p>
+          <p className="text-2xl font-bold text-brand-deep-blue">1</p>
           <p className="text-sm text-neutral-500">Posts</p>
         </div>
         <div>
-          <p className="text-2xl font-bold text-brand-deep-blue">{user.follower_count}</p>
+          <p className="text-2xl font-bold text-brand-deep-blue">{user.followers_count}</p>
           <p className="text-sm text-neutral-500">Followers</p>
         </div>
         <div>

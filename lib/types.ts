@@ -21,3 +21,10 @@ export interface Conversation {
   lastMessage: string;
   timestamp: string;
 }
+
+export interface Message {
+  id: number;
+  content: string;
+  created_at: string;
+  sender_id: number;
+}

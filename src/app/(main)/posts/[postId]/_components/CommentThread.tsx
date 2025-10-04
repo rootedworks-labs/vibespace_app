@@ -2,7 +2,8 @@
 
 import useSWR from 'swr';
 import api from '@/src/app/api';
-import { Comment } from './Comment';
+// Import both the component and its props type
+import { Comment, CommentProps } from './Comment'; 
 import { Spinner } from '@/src/app/components/ui/Spinner';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
@@ -12,7 +13,8 @@ interface CommentThreadProps {
 }
 
 export function CommentThread({ postId }: CommentThreadProps) {
-  const { data: comments, error, isLoading } = useSWR(`/posts/${postId}/comments`, fetcher);
+  // Tell SWR to expect an array of this specific comment shape
+  const { data: comments, error, isLoading } = useSWR<CommentProps['comment'][]>(`/posts/${postId}/comments`, fetcher);
 
   if (isLoading) {
     return (
@@ -29,7 +31,8 @@ export function CommentThread({ postId }: CommentThreadProps) {
   return (
     <div className="space-y-4">
       {comments && comments.length > 0 ? (
-        comments.map((comment: any) => (
+        // No longer using 'any', now using the correct type
+        comments.map((comment) => (
           <Comment key={comment.id} comment={comment} />
         ))
       ) : (

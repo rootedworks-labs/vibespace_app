@@ -138,7 +138,7 @@ export function VibeCard({ id, user_id, author, timeWindow, text, mediaUrl, medi
   return (
     <div
       className={cn(
-       'w-[28rem] rounded-2xl shadow-lg bg-gradient-to-br border border-white/50 overflow-hidden',
+       'w-full max-w-[28rem] mx-2 rounded-2xl shadow-lg bg-gradient-to-br border border-white/50 overflow-hidden',
         gradient,
         glow,
         isDeleting && 'opacity-50 pointer-events-none'
