@@ -62,6 +62,13 @@ router.patch(
   userController.updateProfile
 );
 
+// --- New: Route to get posts for the current user ---
+router.get(
+  '/me/posts',
+  authMiddleware.authenticate,
+  postController.getPostsForCurrentUser
+);
+
 // --- New Follow System Routes ---
 // These routes allow the authenticated user to follow or unfollow another user by their username.
 router.post(

@@ -233,6 +233,35 @@ const swaggerDefinition = {
             }
         }
     },
+    '/api/users': {
+        get: {
+            tags: ['Users'],
+            summary: 'Get a list of all users',
+            description: 'Retrieves a list of all users with public-safe information.',
+            security: [{ bearerAuth: [] }],
+            responses: {
+              '200': { description: 'A list of users' },
+              '401': { description: 'Unauthorized' }
+            }
+        }
+    },
+    '/api/users/{username}': {
+        get: {
+            tags: ['Users'],
+            summary: 'Get user profile by username',
+            parameters: [{
+              in: 'path',
+              name: 'username',
+              required: true,
+              schema: { type: 'string' },
+              description: 'The username of the user to retrieve'
+            }],
+            responses: {
+              '200': { description: 'Successful operation' },
+              '404': { description: 'User not found' }
+            }
+        }
+    },
     '/api/users/{username}/follow': {
         post: {
             tags: ['Users'],
@@ -267,6 +296,23 @@ const swaggerDefinition = {
             }
         }
     },
+    '/api/users/{username}/posts': {
+        get: {
+            tags: ['Users'],
+            summary: 'Get all posts by a specific user',
+            parameters: [{
+                in: 'path',
+                name: 'username',
+                required: true,
+                schema: { type: 'string' },
+                description: 'The username of the user whose posts are to be retrieved'
+            }],
+            responses: {
+                '200': { description: 'A list of posts by the user' },
+                '404': { description: 'User not found' }
+            }
+        }
+    },
     '/api/users/search': {
         get: {
             tags: ['Users'],
@@ -293,6 +339,33 @@ const swaggerDefinition = {
             responses: {
                 '200': { description: 'A JSON file with all user data' },
                 '401': { description: 'Unauthorized' }
+            }
+        }
+    },
+    '/api/users/me/posts': {
+        get: {
+            tags: ['Users'],
+            summary: 'Get all posts for the current user',
+            description: 'Retrieves a paginated list of posts created by the currently authenticated user.',
+            security: [{ bearerAuth: [] }],
+            parameters: [
+                {
+                  in: 'query',
+                  name: 'page',
+                  schema: { type: 'integer', default: 1, minimum: 1 },
+                  required: false,
+                  description: 'Page number for pagination.'
+                },
+                {
+                  in: 'query',
+                  name: 'limit',
+                  schema: { type: 'integer', default: 10, minimum: 1 },
+                  required: false,
+                  description: 'Number of items per page.'
+                }
+            ],
+            responses: {
+                '200': { description: 'A list of posts by the current user' }
             }
         }
     },
@@ -397,9 +470,9 @@ const swaggerDefinition = {
             'application/json': {
               schema: {
                 type: 'object',
-                required: ['vibe_type'],
+                required: ['vibeType'],
                 properties: {
-                  vibe_type: {
+                  vibeType: {
                     type: 'string',
                     example: 'energy',
                     description: "The type of vibe (e.g., 'energy', 'flow', 'fire')."
@@ -477,7 +550,7 @@ const swaggerDefinition = {
           }
         }
       },
-      '/api/posts/comments/{commentId}': {
+      '/api/comments/{commentId}': {
         delete: {
           tags: ['Posts'],
           summary: 'Delete a comment',
@@ -496,7 +569,7 @@ const swaggerDefinition = {
           }
         }
       },
-      '/api/posts/comments/{commentId}/vibe': {
+      '/api/comments/{commentId}/vibe': {
         post: {
           tags: ['Posts'],
           summary: 'Give a vibe to a comment',
@@ -515,9 +588,9 @@ const swaggerDefinition = {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['vibe_type'],
+                  required: ['vibeType'],
                   properties: {
-                    vibe_type: {
+                    vibeType: {
                       type: 'string',
                       example: 'fire',
                       description: "The type of vibe (e.g., 'energy', 'flow', 'fire')."
@@ -555,6 +628,33 @@ const swaggerDefinition = {
               tags: ['Feed'],
               summary: 'Get the personalized activity feed for the current user',
               security: [{ bearerAuth: [] }],
+              parameters: [
+                {
+                  in: 'query',
+                  name: 'time_window',
+                  schema: {
+                    type: 'string',
+                    enum: ['all', 'morning', 'afternoon', 'evening'],
+                    default: 'all'
+                  },
+                  required: false,
+                  description: 'Filter posts by the time of day they were created.'
+                },
+                {
+                  in: 'query',
+                  name: 'page',
+                  schema: { type: 'integer', default: 1, minimum: 1 },
+                  required: false,
+                  description: 'Page number for pagination.'
+                },
+                {
+                  in: 'query',
+                  name: 'limit',
+                  schema: { type: 'integer', default: 10, minimum: 1 },
+                  required: false,
+                  description: 'Number of items per page.'
+                }
+              ],
               responses: {
                   '200': { description: 'A list of posts for the feed' },
                   '401': { description: 'Unauthorized' }
@@ -765,9 +865,9 @@ const swaggerDefinition = {
               'application/json': {
                 schema: {
                   type: 'object',
-                  required: ['vibe_type'],
+                  required: ['vibeType'],
                   properties: {
-                    vibe_type: {
+                    vibeType: {
                       type: 'string',
                       example: 'energy',
                       description: "The type of vibe (e.g., 'energy', 'flow', 'fire')."

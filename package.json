@@ -8,7 +8,8 @@
     "dev": "nodemon index.js",
     "migrate": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
-    "make-admin": "node seed_admin.js"
+    "make-admin": "node seed_admin.js",
+    "seed:test": "node seed_test_data.js"
   },
   "keywords": [],
   "author": "",
