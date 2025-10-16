@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-mulish);
+
+  --color-primary-light: #3daa8a;
+  --color-primary: #278d6d;
+  --color-primary-dark: #1a6b54;
+
+  --color-secondary: #a45d5d;
+  --color-accent: #3e2c24;
+  --color-background: #f7f7f7;
+  --color-foreground: #333333;
+
+  --color-brand-terracotta: #E2A08A;
+  --color-brand-sage: #A3B8A1;
+  --color-brand-sand: #F0EAD6;
+  --color-brand-deep-blue: #3A4F6B;
+  
+  
+
+  --color-vibe-flow: #14b8a6;
+  --color-vibe-joy: #fbbf24;
+  --color-vibe-hype: #EF4444;
+  --color-vibe-warmth: #fb923c;
+  --color-vibe-glow: #38b2f6;
+  --color-vibe-reflect: #6366f1;
+  --color-vibe-love: #f472b6;
+
+  
+
+  /* --- NEW AURA COLORS --- */
+  --color-aura-flow-start: #14b8a6;
+  --color-aura-flow-end: #5eead4;
+  --color-aura-joy-start: #fbbf24;
+  --color-aura-joy-end: #fde047;
+  --color-aura-hype-start: #EF4444;
+  --color-aura-hype-end: #f87171;
+  --color-aura-warmth-start: #fb923c;
+  --color-aura-warmth-end: #fed7aa;
+  --color-aura-glow-start: #38b2f6;
+  --color-aura-glow-end: #7dd3fc;
+  --color-aura-reflect-start: #6366f1;
+  --color-aura-reflect-end: #a5b4fc;
+  --color-aura-love-start: #f472b6;
+  --color-aura-love-end: #f9a8d4;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .vibe-glow-terracotta {
+    box-shadow: 0 0 20px 5px theme('colors.brand.terracotta / 10%');
+  }
+  .vibe-glow-sage {
+    box-shadow: 0 0 20px 5px theme('colors.brand.sage / 10%');
+  }
+  .vibe-glow-sand {
+    box-shadow: 0 0 20px 5px theme('colors.brand.sand / 10%');
+  }
+  .vibe-glow-deep-blue {
+    box-shadow: 0 0 20px 5px theme('colors.brand.deep-blue / 10%');
+  }
+}
+
+@keyframes flow {
+  0% {
+    transform: translateX(0) scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100vw) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-aura {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(1.05);
+  }
+}
+
+/* Add this new keyframe animation for the ProfileAura */
+@keyframes pulse-slow {
+  0%, 100% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
