@@ -257,7 +257,10 @@ const swaggerDefinition = {
               description: 'The username of the user to retrieve'
             }],
             responses: {
-              '200': { description: 'Successful operation' },
+              '200': { 
+                description: 'Successful operation',
+                content: { 'application/json': { schema: { '$ref': '#/components/schemas/UserProfile' } } }
+              },
               '404': { description: 'User not found' }
             }
         }
@@ -402,11 +405,11 @@ const swaggerDefinition = {
                                     nullable: true,
                                     description: 'Optional tag for categorizing the post into a vibe channel.'
                                 },
-                                is_public: { type: 'boolean', example: true },
-                                media: {
+                                is_public: { type: 'boolean', default: true },
+                                file: {
                                     type: 'string',
                                     format: 'binary',
-                                    description: 'Optional image file for the post'
+                                    description: 'Optional image or video file for the post. The server will determine the media_type.'
                                 }
                             }
                         }
@@ -1023,6 +1026,32 @@ const swaggerDefinition = {
         }
       }
   },
+  schemas: {
+    UserProfile: {
+      type: 'object',
+      properties: {
+        id: { type: 'integer', example: 1 },
+        username: { type: 'string', example: 'MarcusR' },
+        bio: { type: 'string', example: 'Filmmaker & storyteller. Capturing the vibe of the city.' },
+        website: { type: 'string', example: 'https://marcusrfilms.com' },
+        profile_picture_url: { type: 'string', format: 'uri', example: 'https://images.pexels.com/photos/1812808/pexels-photo-1812808.jpeg' },
+        created_at: { type: 'string', format: 'date-time' },
+        following_count: { type: 'integer', example: 15 },
+        followers_count: { type: 'integer', example: 152 },
+        is_following: { type: 'boolean', example: false },
+        vibe_counts: {
+          type: 'object',
+          additionalProperties: { type: 'integer' },
+          example: { 'flow': 12, 'hype': 5, 'joy': 8 }
+        },
+        dominant_vibe: {
+          type: 'string',
+          nullable: true,
+          example: 'flow'
+        }
+      }
+    }
+  }
 };
 
 module.exports = swaggerDefinition;

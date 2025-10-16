@@ -13,6 +13,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_started
+      minio-client:
+        condition: service_completed_successfully
     networks:
       - vibespace_net
 
@@ -58,8 +60,15 @@ services:
   minio-client:
     image: minio/mc
     container_name: minio_client
+    restart: on-failure
     depends_on:
       - minio
+      minio:
+        condition: service_started # Wait for minio service to start
+    volumes:
+      - ./init-minio.sh:/init-minio.sh
+    env_file:
+      - .env
     networks:
       - vibespace_net
     entrypoint: >
@@ -71,6 +80,7 @@ services:
       echo 'MinIO is ready!';
       tail -f /dev/null
       "
+    entrypoint: ["/bin/sh", "/init-minio.sh"]
 
 networks:
   vibespace_net:
