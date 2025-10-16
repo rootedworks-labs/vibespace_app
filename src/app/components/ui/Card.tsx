@@ -9,7 +9,8 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      'rounded-lg border border-neutral-200 bg-background text-foreground shadow-sm',
+      // Correctly applying the sand color directly from your CSS variables
+      'rounded-2xl border border-neutral-200/50 bg-[var(--color-brand-sand)] text-foreground shadow-xl shadow-black/5 dark:border-neutral-800/50 dark:bg-neutral-900',
       className
     )}
     {...props}
