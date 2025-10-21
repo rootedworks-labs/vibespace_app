@@ -30,5 +30,5 @@ export interface Message {
   sender_id: number;
   media_url: string;
   media_type: string | null;
-
+  read_at: string;
 }
