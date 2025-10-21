@@ -172,12 +172,27 @@ const createConversationRules = () => {
 // --- New: Rules for sending a message ---
 const sendMessageRules = () => {
     return [
+        // Content is now optional, but if it exists, it should be a string.
         body('content')
+            .optional()
+            .isString()
             .trim()
-            .notEmpty()
-            .withMessage('Message content cannot be empty.')
-            .isLength({ max: 2000 })
-            .withMessage('Message cannot exceed 2000 characters.')
+            .escape(),
+
+        // Media URL is optional, but if it exists, it must be a valid URL.
+        body('media_url')
+            .optional({ checkFalsy: true }) // Treat empty strings as not present
+            .isURL()
+            .withMessage('A valid media URL is required.'),
+
+        // Custom validator to ensure that at least one of the two fields is present.
+        body().custom((value, { req }) => {
+            const { content, media_url } = req.body;
+            if (!content && !media_url) {
+                throw new Error('A message must contain either text content or a media URL.');
+            }
+            return true;
+        }),
     ];
 };
 

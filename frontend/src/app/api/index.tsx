@@ -23,3 +23,19 @@ export const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export default api;
 
+
+export const viewUserData = async () => {
+  const response = await api.get('/data/view');
+  return response.data;
+};
+
+/**
+ * Fetches all of the authenticated user's data as a file blob for export.
+ */
+export const exportUserData = async () => {
+  const response = await api.get('/data/export', {
+    responseType: 'blob', // This is crucial for handling file downloads
+  });
+  return response.data;
+};
+

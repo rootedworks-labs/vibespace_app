@@ -25,6 +25,8 @@ services:
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      # --- ADDED THIS LINE ---
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     environment:
       POSTGRES_USER: ${PG_USER}
       POSTGRES_PASSWORD: ${PG_PASSWORD}
@@ -62,9 +64,8 @@ services:
     container_name: minio_client
     restart: on-failure
     depends_on:
-      - minio
       minio:
-        condition: service_started # Wait for minio service to start
+        condition: service_started
     volumes:
       - ./init-minio.sh:/init-minio.sh
     env_file:
@@ -80,7 +81,7 @@ services:
       echo 'MinIO is ready!';
       tail -f /dev/null
       "
-    entrypoint: ["/bin/sh", "/init-minio.sh"]
+    # entrypoint: ["/bin/sh", "/init-minio.sh"]
 
 networks:
   vibespace_net:
@@ -89,4 +90,3 @@ networks:
 volumes:
   postgres_data:
   minio_data:
-

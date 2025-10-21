@@ -1,69 +1,70 @@
-// In services/websocket.js
 const { WebSocketServer } = require('ws');
 const jwt = require('jsonwebtoken');
-const { query } = require('../db');
+const url = require('url');
 
-// This map will store the WebSocket connection for each online user
 const onlineUsers = new Map();
-
 let wss;
 
 function initializeWebSocket(server) {
-    wss = new WebSocketServer({ server });
+  wss = new WebSocketServer({ noServer: true }); // We'll handle the upgrade manually
 
-    wss.on('connection', async (ws, req) => {
-        // The token will be sent as a query parameter, e.g., ws://localhost:5000?token=...
-        const token = new URL(req.url, `http://${req.headers.host}`).searchParams.get('token');
+  // --- THIS IS THE FIX FOR 'ws' ---
+  // We intercept the HTTP 'upgrade' request to check the origin (CORS)
+  // before establishing the WebSocket connection.
+  server.on('upgrade', (request, socket, head) => {
+    const { origin } = request.headers;
+    const allowedOrigins = (process.env.FRONTEND_URL || "http://localhost:3000").split(',');
 
-        if (!token) {
-            return ws.close(1008, 'Token required');
-        }
-
-        try {
-            // 1. Authenticate the connection
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            const userId = decoded.id;
-
-            // 2. Store the connection
-            onlineUsers.set(userId, ws);
-            console.log(`WebSocket: User ${userId} connected.`);
-
-            // 3. Handle incoming messages (optional for now, but good for future features)
-            ws.on('message', (message) => {
-                console.log(`Received message from user ${userId}: ${message}`);
-            });
-
-            // 4. Handle disconnection
-            ws.on('close', () => {
-                onlineUsers.delete(userId);
-                console.log(`WebSocket: User ${userId} disconnected.`);
-            });
-
-        } catch (err) {
-            ws.close(1008, 'Invalid token');
-        }
-    });
-
-    console.log('WebSocket server initialized.');
-}
-
-/**
- * Sends a message to a specific user if they are online.
- * @param {number} recipientId - The ID of the user to send the message to.
- * @param {object} message - The message object to send.
- */
-function sendMessageToUser(recipientId, message) {
-    const recipientSocket = onlineUsers.get(recipientId);
-
-    if (recipientSocket && recipientSocket.readyState === recipientSocket.OPEN) {
-        recipientSocket.send(JSON.stringify(message));
-        console.log(`Sent real-time message to user ${recipientId}`);
-    } else {
-        console.log(`User ${recipientId} is not online. Message will be delivered on next fetch.`);
+    if (!origin || !allowedOrigins.includes(origin)) {
+      console.log(`WebSocket: Denying connection from origin ${origin}`);
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      socket.destroy();
+      return;
     }
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  });
+  // --- END OF FIX ---
+
+  wss.on('connection', async (ws, req) => {
+    const token = url.parse(req.url, true).query.token;
+
+    if (!token) {
+      return ws.close(1008, 'Token required');
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const userId = decoded.id;
+
+      onlineUsers.set(userId, ws);
+      console.log(`WebSocket: User ${userId} connected.`);
+
+      ws.on('close', () => {
+        onlineUsers.delete(userId);
+        console.log(`WebSocket: User ${userId} disconnected.`);
+      });
+
+    } catch (err) {
+      ws.close(1008, 'Invalid token');
+    }
+  });
+
+  console.log('WebSocket server (ws) initialized.');
 }
 
-module.exports = {
-    initializeWebSocket,
-    sendMessageToUser
-};
+function sendMessageToUser(recipientId, message) {
+  const recipientSocket = onlineUsers.get(recipientId);
+
+  if (recipientSocket && recipientSocket.readyState === recipientSocket.OPEN) {
+    recipientSocket.send(JSON.stringify(message));
+    console.log(`Sent real-time message to user ${recipientId}`);
+  } else {
+    console.log(`User ${recipientId} is not online. Message will be delivered on next fetch.`);
+  }
+}
+
+module.exports = { initializeWebSocket, sendMessageToUser };
+

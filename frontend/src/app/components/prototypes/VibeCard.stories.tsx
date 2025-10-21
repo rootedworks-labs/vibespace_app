@@ -32,8 +32,8 @@ export const MorningVibeWithImage: Story = {
       
       author: 'Vibespace',
       avatarUrl: 'vibespace-logo-transparent-hardmark.png',
-      mediaUrl: 'https://placehold.co/600x400/a3b8a1/3A4F6B?text=VibeSpace',
-      mediaType: 'image',
+      media_url: 'https://placehold.co/600x400/a3b8a1/3A4F6B?text=VibeSpace',
+      media_type: 'image',
       timeWindow: 'Afternoon',
       vibeCounts: { flow: 10, glow: 5, joy: 15 },
       
@@ -45,8 +45,8 @@ args: {
   id: 3,
   author: "VibeSpace",
   text: "",
-  mediaUrl: 'https://placehold.co/600x400/e2a08a/3A4F6B?text=VibeSpace',
-  mediaType: 'image',
+  media_url: 'https://placehold.co/600x400/e2a08a/3A4F6B?text=VibeSpace',
+  media_type: 'image',
   timeWindow: "Afternoon",
   vibeCounts: { flow: 3, glow:2 },
   avatarUrl: "vibespace-logo-transparent-hardmask.png"
@@ -59,8 +59,8 @@ export const MorningVibeWithVideo: Story = {
     author: 'Sam',
     text: 'Winding down for the night with some calming visuals.',
     // Note: Using a placeholder video URL. You may need to find a different one if this link breaks.
-    mediaUrl: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    mediaType: 'video',
+    media_url: 'http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    media_type: 'video',
     timeWindow: 'Evening',
     vibeCounts: { hype: 10, reflect: 5 },
   },

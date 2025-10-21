@@ -1,4 +1,5 @@
 const { query } = require('../db');
+const { getIO } = require('../services/websocket'); // 1. Import getIO
 
 /**
  * Creates and stores a new notification.
@@ -21,28 +22,18 @@ exports.createNotification = async (recipientId, senderId, type, entityId = null
     const newNotification = result.rows[0];
     console.log(`--- NOTIFICATION CREATED: [${type}] for user ${recipientId} from user ${senderId} ---`);
 
-    // --- Real-time Push via WebSocket ---
-    // Fetch sender's info to create a rich payload for the real-time message
-    const senderResult = await query(
-        'SELECT username, profile_picture_url FROM users WHERE id = $1',
-        [senderId]
-    );
-    const sender = senderResult.rows[0];
-
-    // Construct the payload
-    const notificationPayload = {
-      ...newNotification,
-      sender_username: sender.username,
-      sender_avatar: sender.profile_picture_url,
-    };
+    // --- 2. Real-time Push via Socket.IO Room ---
+    const io = getIO();
+    const recipientRoom = `user_${recipientId}`;
     
-    // Send the notification to the user if they are online
-    sendMessageToUser(recipientId, {
-      type: 'new_notification',
-      payload: notificationPayload,
-    });
+    // Emit a simple event. The client will refetch its notifications upon receiving this.
+    io.to(recipientRoom).emit('new_notification');
+    
+    console.log(`Notification event emitted to room: ${recipientRoom}`);
+    
+    return newNotification;
 
   } catch (err) {
-    console.error('Failed to create notification:', err);
+    console.error('Error creating notification:', err);
   }
 };

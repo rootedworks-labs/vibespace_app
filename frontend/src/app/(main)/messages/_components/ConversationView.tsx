@@ -13,24 +13,85 @@ import { useAuthStore } from '@/src/app/store/authStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef } from 'react';
 
-
-
-
-
-
 interface ConversationViewProps {
   conversation: Conversation;
   onBack: () => void;
 }
 
 export function ConversationView({ conversation, onBack }: ConversationViewProps) {
-    const { user: currentUser } = useAuthStore();
-    const { data: messages, error, isLoading } = useSWR<Message[]>(`/conversations/${conversation.id}/messages`, fetcher);
+    const { user: currentUser, accessToken } = useAuthStore(); // 1. Get accessToken
+    const { data: messages, error, isLoading, mutate } = useSWR<Message[]>(
+      `/conversations/${conversation.id}/messages`, 
+      fetcher
+    );
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    
+    // 2. Add a ref to hold the stable WebSocket instance
+    const socketRef = useRef<WebSocket | null>(null);
 
+    // Effect for scrolling down when new messages appear
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
+
+    // 3. Add a new useEffect to manage the WebSocket connection using the 'ws' library pattern
+    useEffect(() => {
+      if (!accessToken) return;
+  
+      // Connect only if the socket isn't already created in the ref
+      if (!socketRef.current) {
+        const wsUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')
+          .replace(/^http/, 'ws') + `/?token=${accessToken}`;
+        
+        console.log(`Attempting to connect WebSocket for messages: ${wsUrl}`);
+        
+        socketRef.current = new WebSocket(wsUrl);
+        const ws = socketRef.current;
+  
+        ws.onopen = () => console.log('WebSocket connected for messages.');
+        
+        ws.onclose = () => {
+          console.log('WebSocket disconnected for messages.');
+          socketRef.current = null;
+        };
+  
+        ws.onerror = (err) => {
+          console.error('WebSocket error in messages:', err);
+          socketRef.current = null;
+        };
+  
+        // 4. Listen for incoming messages
+        ws.onmessage = (event) => {
+          try {
+            const incomingData = JSON.parse(event.data);
+
+            // Check if the incoming data is a new message object
+            if (incomingData && incomingData.type === 'new_message') {
+                const newMessage: Message = incomingData.payload;
+                console.log('New message received via WebSocket:', newMessage);
+                
+                // Only update if the message belongs to the currently viewed conversation
+                if (newMessage.conversation_id === conversation.id) {
+                  // Use mutate to re-fetch the message list, which will update the UI
+                  mutate();
+                }
+            }
+          } catch (e) {
+            console.error('Error parsing WebSocket message:', e);
+          }
+        };
+      }
+  
+      // The cleanup function runs when the component unmounts
+      return () => {
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          console.log('Cleaning up and disconnecting messages socket...');
+          socketRef.current.close();
+          socketRef.current = null;
+        }
+      };
+    }, [accessToken, conversation.id, mutate]);
+
 
     // Safely handle cases where the user may have been deleted.
     const user = conversation.user;
@@ -60,7 +121,6 @@ export function ConversationView({ conversation, onBack }: ConversationViewProps
                 )}
                 {error && <p className="text-center text-red-500">Failed to load messages.</p>}
                 
-                {/* MODIFICATION: Wrap the message list in AnimatePresence */}
                 <AnimatePresence>
                     {messages?.map(msg => (
                         <MessageBubble key={msg.id} message={msg} currentUserId={currentUser?.id} />

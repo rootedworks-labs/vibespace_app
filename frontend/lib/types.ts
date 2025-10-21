@@ -7,8 +7,8 @@ export interface User {
 
 export interface Notification {
   id: string;
-  actor: User;
-  type: 'VIBE' | 'COMMENT' | 'FOLLOW';
+  sender: User;
+  type: 'vibe' | 'comment' | 'follow';
   post_id?: string;
   read: boolean;
   created_at: string;
@@ -26,5 +26,9 @@ export interface Message {
   id: number;
   content: string;
   created_at: string;
+  conversation_id:number
   sender_id: number;
+  media_url: string;
+  media_type: string | null;
+
 }

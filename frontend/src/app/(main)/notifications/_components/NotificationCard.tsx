@@ -25,8 +25,8 @@ const timeSince = (dateString: string) => {
 };
 
 const getNotificationLink = (notification: Notification): string => {
-  if (notification.type === 'FOLLOW') {
-    return `/profile/${notification.actor.username}`;
+  if (notification.type === 'follow') {
+    return `/profile/${notification.sender.username}`;
   }
   if (notification.post_id) {
     return `/posts/${notification.post_id}`;
@@ -38,11 +38,11 @@ const getNotificationLink = (notification: Notification): string => {
 const NotificationCard = ({ notification }: { notification: Notification }) => {
   const getMessage = () => {
     switch (notification.type) {
-      case 'VIBE':
+      case 'vibe':
         return 'vibed with your post.';
-      case 'COMMENT':
+      case 'comment':
         return 'commented on your post.';
-      case 'FOLLOW':
+      case 'follow':
         return 'started following you.';
       default:
         return '';
@@ -56,12 +56,12 @@ const NotificationCard = ({ notification }: { notification: Notification }) => {
         !notification.read && "bg-brand-sand/30 dark:bg-brand-sand/10"
       )}>
         <Avatar>
-          <AvatarImage src={notification.actor.profile_picture_url || ''} alt={notification.actor.username} />
-          <AvatarFallback>{notification.actor.username[0].toUpperCase()}</AvatarFallback>
+          <AvatarImage src={notification.sender.profile_picture_url || ''} alt={notification.sender.username} />
+          <AvatarFallback>{notification.sender.username[0].toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
           <p>
-            <span className="font-bold">{notification.actor.username}</span> {getMessage()}
+            <span className="font-bold">{notification.sender.username}</span> {getMessage()}
           </p>
           <p className="text-sm text-gray-500">{timeSince(notification.created_at)}</p>
         </div>

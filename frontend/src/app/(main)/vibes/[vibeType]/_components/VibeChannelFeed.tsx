@@ -12,7 +12,7 @@ interface VibeChannelFeedProps {
 
 export function VibeChannelFeed({ vibeType }: VibeChannelFeedProps) {
   // Use the imported Post type for SWR
-  const { data: posts, error } = useSWR<Post[]>(`/api/posts/channel/${vibeType}`, fetcher);
+  const { data: posts, error } = useSWR<Post[]>(`/posts/channel/${vibeType}`, fetcher);
 
   if (error) {
     return <p className="text-center text-red-500">Failed to load posts for this vibe.</p>;

@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/src/app/store/authStore';
 import { MessageCircle, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image'; // 1. Import Next.js Image component
 
 
 type VibeCounts = {
@@ -37,8 +38,8 @@ interface VibeCardProps {
   };
   timeWindow: 'Morning' | 'Afternoon' | 'Evening';
   text?: string;
-  mediaUrl?: string;
-  mediaType?: 'image' | 'video';
+  media_url?: string;
+  media_type?: 'image' | 'video';
   vibeCounts: VibeCounts;
   userVibe?: string | null;
   comment_count: number;
@@ -71,7 +72,7 @@ const getGlowClass = (window: VibeCardProps['timeWindow']) => {
     }
 }
 
-export function VibeCard({ id, user_id, author, timeWindow, text, mediaUrl, mediaType, vibeCounts, userVibe, comment_count }: VibeCardProps) {
+export function VibeCard({ id, user_id, author, timeWindow, text, media_url, media_type, vibeCounts, userVibe, comment_count }: VibeCardProps) {
   const gradient = getWindowGradient(timeWindow);
   const glow = getGlowClass(timeWindow);
   const [localVibeCounts, setLocalVibeCounts] = useState(vibeCounts);
@@ -175,12 +176,22 @@ export function VibeCard({ id, user_id, author, timeWindow, text, mediaUrl, medi
       </div>
 
       <Link href={`/posts/${id}`} className="cursor-pointer block">
-        {mediaUrl && mediaType === 'image' && (
-          <img src={mediaUrl} alt={`Vibe from ${author.name}`} className="w-full h-auto object-cover" />
+        {/* --- 2. MEDIA RENDERING BLOCK (UPDATED) --- */}
+        {media_url && media_type === 'image' && (
+          <div className="relative aspect-video max-h-96 w-full overflow-hidden">
+            <Image
+              src={media_url}
+              alt={`Vibe from ${author.name}`}
+              fill
+              style={{ objectFit: 'cover' }}
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            />
+          </div>
         )}
-        {mediaUrl && mediaType === 'video' && (
-          <video src={mediaUrl} controls autoPlay muted loop className="w-full h-auto" />
+        {media_url && media_type === 'video' && (
+          <video src={media_url} controls autoPlay muted loop className="w-full h-auto max-h-96 block" />
         )}
+        {/* --- END OF MEDIA BLOCK --- */}
         {text && (
           <div className="px-6">
             <p className="text-foreground/90">{text}</p>
@@ -215,4 +226,3 @@ export function VibeCard({ id, user_id, author, timeWindow, text, mediaUrl, medi
     </div>
   );
 }
-

@@ -1,13 +1,11 @@
-// In controllers/messageController.js
 const { query } = require('../db');
 const { sendMessageToUser } = require('../services/websocket');
-
 
 /**
  * Starts a new conversation with another user or returns the existing one.
  */
 exports.createConversation = async (req, res) => {
-    const { userId } = req; // The initiator
+    const userId = req.userId; // The initiator
     const { recipientId } = req.body;
 
     if (userId === recipientId) {
@@ -37,8 +35,9 @@ exports.createConversation = async (req, res) => {
             'INSERT INTO conversation_participants (conversation_id, user_id) VALUES ($1, $2), ($1, $3)',
             [conversationId, userId, recipientId]
         );
-
+        
         res.status(201).json({ id: conversationId });
+
     } catch (err) {
         console.error('Create conversation error:', err);
         res.status(500).json({ error: 'Server error.' });
@@ -47,21 +46,71 @@ exports.createConversation = async (req, res) => {
 
 
 /**
+ * Creates a new message and sends it to the other participant via WebSocket.
+ */
+// --- FIX: Renamed back to sendMessage to match the route file ---
+exports.sendMessage = async (req, res) => {
+  const { conversationId } = req.params;
+  // --- MODIFICATION: Destructure media_url and media_type from the request body ---
+  const { content, media_url, media_type } = req.body;
+  const senderId = req.userId;
+
+  // --- MODIFICATION: A message must have either text content or media ---
+  if (!content && !media_url) {
+    return res.status(400).json({ error: 'Message cannot be empty.' });
+  }
+
+  try {
+    const participantRes = await query(
+      'SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2',
+      [conversationId, senderId]
+    );
+
+    if (participantRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversation participant not found.' });
+    }
+    const recipientId = participantRes.rows[0].user_id;
+
+    // --- MODIFICATION: Update the INSERT query to include the new media columns ---
+    const newMessageRes = await query(
+      'INSERT INTO messages (conversation_id, sender_id, content, media_url, media_type) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [conversationId, senderId, content || null, media_url || null, media_type || null]
+    );
+    const newMessage = newMessageRes.rows[0];
+
+    const messagePayload = {
+      type: 'new_message',
+      payload: newMessage,
+    };
+    sendMessageToUser(recipientId, messagePayload);
+    sendMessageToUser(senderId, messagePayload);
+    
+    res.status(201).json(newMessage);
+
+  } catch (err) {
+    console.error('Create message error:', err);
+    res.status(500).json({ error: 'Server error while creating message.' });
+  }
+};
+
+/**
  * Retrieves all conversations for the authenticated user.
  */
 exports.getConversations = async (req, res) => {
-    const { userId } = req;
+    const userId = req.userId;
     try {
-        const { rows } = await query(
-            `SELECT c.id, u.username AS participant_username, u.profile_picture_url AS participant_avatar
+        const result = await query(
+            `SELECT c.id, 
+                    u.username as participant_username, 
+                    u.profile_picture_url as participant_avatar
              FROM conversations c
              JOIN conversation_participants cp ON c.id = cp.conversation_id
              JOIN users u ON cp.user_id = u.id
              WHERE c.id IN (SELECT conversation_id FROM conversation_participants WHERE user_id = $1)
-             AND cp.user_id != $1`, // Get the *other* participant's info
+             AND cp.user_id != $1`,
             [userId]
         );
-        res.status(200).json(rows);
+        res.status(200).json(result.rows);
     } catch (err) {
         console.error('Get conversations error:', err);
         res.status(500).json({ error: 'Server error.' });
@@ -69,96 +118,28 @@ exports.getConversations = async (req, res) => {
 };
 
 /**
- * Retrieves all messages for a specific conversation, now including read status and vibes.
+ * Retrieves all messages for a specific conversation.
  */
 exports.getMessagesForConversation = async (req, res) => {
-    const { userId } = req;
     const { conversationId } = req.params;
+    const userId = req.userId;
     try {
-        // Security check: Ensure the user is a participant of the conversation
+        // Security check to ensure user is a participant
         const participantCheck = await query(
             'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
             [conversationId, userId]
         );
         if (participantCheck.rows.length === 0) {
-            return res.status(403).json({ error: 'You are not a participant of this conversation.' });
+            return res.status(403).json({ error: 'User is not part of this conversation.' });
         }
 
-        const { rows } = await query(
-            `SELECT
-                m.id,
-                m.content,
-                m.created_at,
-                m.sender_id,
-                u.username AS sender_username,
-                (m.read_at IS NOT NULL) as read_by_recipient,
-                (
-                    SELECT COALESCE(json_object_agg(mv.vibe_type, mv.count), '{}'::json)
-                    FROM (
-                        SELECT vibe_type, COUNT(*) as count
-                        FROM message_vibes
-                        WHERE message_id = m.id
-                        GROUP BY vibe_type
-                    ) mv
-                ) as vibe_counts
-             FROM messages m
-             JOIN users u ON m.sender_id = u.id
-             WHERE m.conversation_id = $1
-             ORDER BY m.created_at ASC`,
+        const result = await query(
+            'SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at ASC',
             [conversationId]
         );
-        res.status(200).json(rows);
+        res.status(200).json(result.rows);
     } catch (err) {
         console.error('Get messages error:', err);
-        res.status(500).json({ error: 'Server error.' });
-    }
-};
-
-
-/**
- * Sends a new message in a conversation.
- */
-exports.sendMessage = async (req, res) => {
-    const { userId } = req; // This is the sender's ID
-    const { conversationId } = req.params;
-    const { content } = req.body;
-
-    try {
-        // Security check: Ensure the user is a participant
-        const participantCheck = await query(
-            'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
-            [conversationId, userId]
-        );
-        if (participantCheck.rows.length === 0) {
-            return res.status(403).json({ error: 'You are not a participant of this conversation.' });
-        }
-
-        // 1. Save the message to the database
-        const { rows } = await query(
-            'INSERT INTO messages (conversation_id, sender_id, content) VALUES ($1, $2, $3) RETURNING *',
-            [conversationId, userId, content]
-        );
-        const newMessage = rows[0];
-
-        // 2. Find the recipient's ID
-        const recipientResult = await query(
-            'SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2',
-            [conversationId, userId]
-        );
-        const recipientId = recipientResult.rows[0]?.user_id;
-
-        // 3. Push the message in real-time
-        if (recipientId) {
-            sendMessageToUser(recipientId, {
-                type: 'new_message',
-                payload: newMessage
-            });
-        }
-
-        // 4. Send the HTTP response back to the sender
-        res.status(201).json(newMessage);
-    } catch (err) {
-        console.error('Send message error:', err);
         res.status(500).json({ error: 'Server error.' });
     }
 };
@@ -167,48 +148,31 @@ exports.sendMessage = async (req, res) => {
  * Marks messages in a conversation as read by the current user.
  */
 exports.markMessagesAsRead = async (req, res) => {
-    const { userId } = req;
     const { conversationId } = req.params;
+    const userId = req.userId;
 
     try {
-        // Security Check: User must be a participant
-        const participantCheck = await query(
-            'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
-            [conversationId, userId]
-        );
-        if (participantCheck.rows.length === 0) {
-            return res.status(403).json({ error: 'Forbidden.' });
-        }
-        
-        // Update messages that were NOT sent by the current user and are unread
         await query(
-            `UPDATE messages
-             SET read_at = NOW()
-             WHERE conversation_id = $1
-             AND sender_id != $2
-             AND read_at IS NULL`,
+            `UPDATE messages SET read_at = NOW() 
+             WHERE conversation_id = $1 AND sender_id != $2 AND read_at IS NULL`,
             [conversationId, userId]
         );
-
         res.status(204).send();
-
     } catch (err) {
         console.error('Mark messages as read error:', err);
-        res.status(500).json({ error: 'Server error.' });
+        res.status(500).json({ error: 'Server error while updating messages.' });
     }
 };
 
 /**
- * Adds or updates a vibe on a message.
+ * Adds or updates a vibe for a specific message.
  */
 exports.addVibeToMessage = async (req, res) => {
-    const { userId } = req;
+    const userId = req.userId;
     const { messageId } = req.params;
     const { vibeType } = req.body;
 
     try {
-        // TODO: Add a security check to ensure the user is part of the message's conversation.
-
         const vibeQuery = `
             INSERT INTO message_vibes (user_id, message_id, vibe_type)
             VALUES ($1, $2, $3)
@@ -227,7 +191,7 @@ exports.addVibeToMessage = async (req, res) => {
  * Removes a vibe from a message.
  */
 exports.removeVibeFromMessage = async (req, res) => {
-    const { userId } = req;
+    const userId = req.userId;
     const { messageId } = req.params;
 
     try {
@@ -236,11 +200,12 @@ exports.removeVibeFromMessage = async (req, res) => {
             [userId, messageId]
         );
         if (result.rowCount === 0) {
-            return res.status(404).json({ error: 'Vibe not found.' });
+            return res.status(404).json({ error: 'Vibe not found or you do not have permission to remove it.' });
         }
-        res.status(200).json({ message: 'Vibe removed from message successfully.' });
+        res.status(204).send();
     } catch (err) {
         console.error('Remove vibe from message error:', err);
         res.status(500).json({ error: 'Server error.' });
     }
 };
+
