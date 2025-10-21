@@ -13,6 +13,32 @@ const bubbleVariants = {
   animate: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3 } },
 };
 
+// --- NEW: Helper function to format the timestamp ---
+const timeSince = (dateString: string) => {
+  const date = new Date(dateString);
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+
+  let interval = seconds / 31536000; // Years
+  if (interval > 1) return Math.floor(interval) + "y ago";
+  
+  interval = seconds / 2592000; // Months
+  if (interval > 1) return Math.floor(interval) + "mo ago";
+  
+  interval = seconds / 86400; // Days
+  if (interval > 1) return Math.floor(interval) + "d ago";
+  
+  interval = seconds / 3600; // Hours
+  if (interval > 1) return Math.floor(interval) + "h ago";
+  
+  interval = seconds / 60; // Minutes
+  if (interval > 1) return Math.floor(interval) + "m ago";
+  
+  // For anything less than a minute, show "Just now"
+  if (seconds < 10) return "Just now";
+  
+  return Math.floor(seconds) + "s ago";
+};
+
 export function MessageBubble({ message, currentUserId }: MessageBubbleProps) {
   const isCurrentUser = message.sender_id === currentUserId;
 
@@ -59,6 +85,14 @@ export function MessageBubble({ message, currentUserId }: MessageBubbleProps) {
                 {message.content}
             </p>
         )}
+
+        <div className={cn(
+          "text-xs pt-1 text-right", // Added text-right to align it
+          isCurrentUser ? "text-white/70" : "text-neutral-400",
+          message.media_url && message.content ? "px-2" : ""
+        )}>
+          {timeSince(message.created_at)}
+        </div>
       </div>
     </motion.div>
   );
