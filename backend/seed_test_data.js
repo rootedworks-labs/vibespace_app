@@ -117,7 +117,7 @@ async function seed() {
       // --- MODIFICATION: Use the new function for realistic content ---
       const content = generateRealisticPostContent();
       // --- END MODIFICATION ---
-      const mediaUrl = faker.datatype.boolean(0.2) ? faker.image.urlLoremFlickr({ category: 'nature' }) : null;
+      const mediaUrl = faker.datatype.boolean(0.2) ? faker.image.url({ category: 'nature' }) : null;
       const mediaType = mediaUrl ? 'image' : null;
       
       const createdAt = faker.date.past({ years: 1 });

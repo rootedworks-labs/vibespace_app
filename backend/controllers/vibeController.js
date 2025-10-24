@@ -1,5 +1,6 @@
 // controllers/vibeController.js
 const { query } = require('../db');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * Adds or updates a vibe on a post for the authenticated user.
@@ -25,6 +26,18 @@ exports.addVibe = async (req, res) => {
 
   try {
     await query(vibeQuery, [userId, postId, vibeType]);
+
+    const postResult = await query('SELECT user_id FROM posts WHERE id = $1', [postId]);
+
+    if (postResult.rows.length > 0) {
+      const authorId = postResult.rows[0].user_id;
+      
+      // Only create a notification if the person vibing is not the post author
+      if (authorId !== userId) {
+        await createNotification(authorId, userId, 'vibe', postId);
+      }
+    }
+    
     res.status(201).json({ message: 'Vibe added/updated successfully.' });
   } catch (err) {
     console.error('Add vibe error:', err);

@@ -65,6 +65,7 @@ exports.getPostById = async (req, res) => {
         p.is_public,
         p.created_at,
         u.username,
+        u.profile_picture_url,
         (SELECT vibe_type FROM vibes WHERE post_id = p.id AND user_id = $2) as user_vibe,
         (
           SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
@@ -98,11 +99,14 @@ exports.getPostById = async (req, res) => {
 exports.getPosts = async (req, res) => {
   const { userId } = req;
   const { vibe_channel_tag } = req.query;
-
+  
+  console.log(userId);
+  console.log(vibe_channel_tag);
   let queryText = `
     SELECT
       p.*,
       u.username,
+      u.profile_picture_url,
       (SELECT vibe_type FROM vibes WHERE post_id = p.id AND user_id = $1) as user_vibe,
       (
         SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
@@ -177,6 +181,7 @@ exports.getFeed = async (req, res) => {
         p.media_url,
         p.media_type,
         p.created_at,
+        u.id as user_id,
         u.username,
         u.profile_picture_url,
         (SELECT vibe_type FROM vibes WHERE post_id = p.id AND user_id = $1) as user_vibe,
@@ -281,6 +286,7 @@ exports.getPostsForCurrentUser = async (req, res) => {
       SELECT
         p.*,
         u.username,
+        u.profile_picture_url,
         (SELECT vibe_type FROM vibes WHERE post_id = p.id AND user_id = $2) as user_vibe,
         (
           SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)

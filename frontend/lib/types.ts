@@ -10,7 +10,7 @@ export interface Notification {
   sender: User;
   type: 'vibe' | 'comment' | 'follow';
   post_id?: string;
-  read: boolean;
+  is_read: boolean;
   created_at: string;
 }
 

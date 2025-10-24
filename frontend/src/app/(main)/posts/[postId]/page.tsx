@@ -39,6 +39,7 @@ export default function SinglePostPage() {
           <VibeCard 
             key={post.id}
             id={post.id}
+            user_id={post.user_id}
             author={{ 
               name: post.username, 
               avatarUrl: post.profile_picture_url || undefined 
@@ -47,8 +48,9 @@ export default function SinglePostPage() {
             timeWindow={getTimeWindow(post.created_at)}
             vibeCounts={post.vibe_counts as VibeCounts}
             userVibe={post.user_vibe as VibeType | undefined}
-            mediaUrl={undefined} 
-            mediaType={undefined}
+            comment_count={post.comment_count}
+            media_url={post.media_url || undefined}
+            media_type={post.media_type as 'image' | 'video' | undefined}
           />
           <div className="w-full border-t pt-8">
             <h2 className="text-2xl font-bold font-heading mb-4">Vibes & Replies</h2>

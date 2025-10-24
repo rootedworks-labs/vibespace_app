@@ -88,7 +88,7 @@ router.delete(
 );
 
 // GET a user's public profile by their username
-router.get('/:username', userController.getUserByUsername);
+router.get('/:username', authMiddleware.authenticate, userController.getUserByUsername);
 
 // GET all posts by a specific user
 router.get('/:username/posts', postController.getPostsByUsername);

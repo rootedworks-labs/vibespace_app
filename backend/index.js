@@ -29,6 +29,7 @@ app.use('/api/waitlist', require('./routes/waitlist'));
 app.use('/api/reports', require('./routes/reports'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/data', require('./routes/data'));
+app.use('/api/vibes', require('./routes/vibes'));
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

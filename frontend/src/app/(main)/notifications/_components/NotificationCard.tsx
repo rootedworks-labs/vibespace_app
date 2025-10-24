@@ -53,7 +53,7 @@ const NotificationCard = ({ notification }: { notification: Notification }) => {
     <Link href={getNotificationLink(notification)}>
       <Card className={cn(
         "p-4 flex items-center space-x-4 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800",
-        !notification.read && "bg-brand-sand/30 dark:bg-brand-sand/10"
+        !notification.is_read && "bg-brand-sand/30 dark:bg-brand-sand/10"
       )}>
         <Avatar>
           <AvatarImage src={notification.sender.profile_picture_url || ''} alt={notification.sender.username} />
@@ -65,7 +65,7 @@ const NotificationCard = ({ notification }: { notification: Notification }) => {
           </p>
           <p className="text-sm text-gray-500">{timeSince(notification.created_at)}</p>
         </div>
-        {!notification.read && (
+        {!notification.is_read && (
           <div className="w-3 h-3 bg-brand-terracotta rounded-full" />
         )}
       </Card>

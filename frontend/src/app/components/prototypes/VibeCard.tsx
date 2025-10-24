@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSWRConfig } from 'swr';
 import api from '@/src/app/api';
 import toast from 'react-hot-toast';
@@ -80,6 +80,10 @@ export function VibeCard({ id, user_id, author, timeWindow, text, media_url, med
   const [currentUserVibe, setCurrentUserVibe] = useState<string | null>(userVibe || null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [needsExpansion, setNeedsExpansion] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
+
   const { user: currentUser } = useAuthStore();
   const { mutate } = useSWRConfig();
   const isAuthor = currentUser?.id === user_id;
@@ -87,7 +91,19 @@ export function VibeCard({ id, user_id, author, timeWindow, text, media_url, med
   useEffect(() => {
     setLocalVibeCounts(vibeCounts);
     setCurrentUserVibe(userVibe || null);
-  }, [id, vibeCounts, userVibe]); 
+    }, [id, vibeCounts, userVibe]);
+  
+    useEffect(() => {
+    // Check if the text element is overflowing its clamped height
+    if (textRef.current) {
+      // We check if the scrollHeight (the total height of the text)
+      // is greater than the clientHeight (the visible height of the element)
+      const isOverflowing = textRef.current.scrollHeight > textRef.current.clientHeight;
+      if (isOverflowing) {
+        setNeedsExpansion(true);
+      }
+    }
+  }, [text]); // Only run this check when the text content changes
 
   const handleVibeSelect = async (vibeType: string) => {
     const originalVibeCounts = { ...localVibeCounts };
@@ -176,35 +192,48 @@ export function VibeCard({ id, user_id, author, timeWindow, text, media_url, med
       </div>
 
       <Link href={`/posts/${id}`} className="cursor-pointer block">
-        {/* --- 2. MEDIA RENDERING BLOCK (UPDATED) --- */}
         {media_url && media_type === 'image' && (
-          <div className="relative aspect-video max-h-96 w-full overflow-hidden">
-            <Image
-              src={media_url}
-              alt={`Vibe from ${author.name}`}
-              fill
-              style={{ objectFit: 'cover' }}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            />
-          </div>
+          // 5. ADDED max-h-96 to constrain image height
+          <img src={media_url} alt={`Vibe from ${author.name}`} className="w-full max-h-96 h-auto object-cover" />
         )}
         {media_url && media_type === 'video' && (
-          <video src={media_url} controls autoPlay muted loop className="w-full h-auto max-h-96 block" />
-        )}
-        {/* --- END OF MEDIA BLOCK --- */}
-        {text && (
-          <div className="px-6">
-            <p className="text-foreground/90">{text}</p>
-          </div>
+          // 6. ADDED max-h-96 to constrain video height
+          <video src={media_url} controls autoPlay muted loop className="w-full max-h-96 h-auto" />
         )}
       </Link>
+        {/* --- END OF MEDIA BLOCK --- */}
+      {text && (
+        <div className={cn(
+          "px-6 pt-4 pb-2",
+          !isExpanded && "min-h-[3.75rem]" 
+        )}>
+          <p 
+            ref={textRef}
+            className={cn(
+              "text-foreground/90",
+              !isExpanded && "line-clamp-3" // Uses line-clamp to limit text to 3 lines
+            )}
+          >
+            {text}
+          </p>
+          {/* 8. ADDED: "Show more" button appears if text is overflowing */}
+          {needsExpansion && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="text-sm font-semibold text-brand-deep-blue/80 hover:text-brand-deep-blue mt-1"
+            >
+              {isExpanded ? "Show less" : "Show more"}
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Footer */}
-      <div className="p-6 mt-2">
+      <div className="p-4 mt-2">
         <div className="border-t border-black/10 pt-4 flex items-center justify-between">
           <EnergyStream vibeCounts={localVibeCounts} />
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1">
             <Link href={`/posts/${id}`} className="flex items-center gap-2 text-neutral-500 hover:text-brand-deep-blue transition-colors">
               <MessageCircle className="h-6 w-6" />
               <span className="font-semibold">{comment_count}</span>
@@ -212,8 +241,8 @@ export function VibeCard({ id, user_id, author, timeWindow, text, media_url, med
 
             <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
               <PopoverTrigger asChild>
-                <Button variant="ghost" className="rounded-full">
-                  <Icon icon="ph:spiral-light" className="h-7 w-7" />
+                <Button variant="ghost" size="sm" className="rounded-full">
+                  <Icon icon="ph:spiral-light" className="h-6 w-6" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 border-none shadow-none bg-transparent">

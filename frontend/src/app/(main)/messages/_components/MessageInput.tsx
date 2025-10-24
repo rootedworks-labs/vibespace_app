@@ -6,26 +6,30 @@ import * as z from 'zod';
 import api from '@/src/app/api';
 import toast from 'react-hot-toast';
 import { Button } from "@/src/app/components/ui/Button";
-import { Send, Paperclip } from "lucide-react"; // Import Paperclip
-import { useState, useRef } from 'react'; // Import hooks
+import { Send, Paperclip } from "lucide-react";
+import { useState, useRef } from 'react';
 import { Spinner } from '@/src/app/components/ui/Spinner';
 import { cn } from '@/lib/utils';
 
 const messageSchema = z.object({
-  content: z.string(), // Content is now optional for image-only messages
+  content: z.string(),
 });
 
 interface MessageInputProps {
   conversationId: number;
+  // --- ADDED THESE PROPS ---
+  recipientId: string | number; // Required to send the typing event
+  socket: WebSocket | null;     // The active WebSocket connection
+  onStartTyping: () => void;  // Keep props, even if logic is handled here
+  onStopTyping: () => void;   // Keep props, even if logic is handled here
+  // --- END ADDITION ---
 }
 
-// --- NEW: Regular expression to detect if a string is a GIF URL ---
-const isGifUrl = (url: string) => {
+const isGifUrl = (url: string): boolean => {
     return /(http(s?):)([/|.|\w|\s|-])*\.(?:gif)/i.test(url.trim());
 };
-// --- END NEW ---
 
-export function MessageInput({ conversationId }: MessageInputProps) {
+export function MessageInput({ conversationId, recipientId, socket, onStartTyping, onStopTyping }: MessageInputProps) {
     const form = useForm<z.infer<typeof messageSchema>>({
         resolver: zodResolver(messageSchema),
         defaultValues: { content: '' },
@@ -33,36 +37,47 @@ export function MessageInput({ conversationId }: MessageInputProps) {
 
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // --- ADDED: Ref to manage typing timeout ---
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // --- ADDED: Helper to send WebSocket messages ---
+    const sendWebSocketMessage = (type: string, payload: any) => {
+        
+      if (socket?.readyState === WebSocket.OPEN) {
+        //console.log('sending', type, payload);
+        socket.send(JSON.stringify({ type, payload }));
+      }
+    };
 
-    // Reusable function to send a message payload to the backend
     const sendMessage = async (messageData: { content?: string; media_url?: string; media_type?: string }) => {
         await api.post(`/conversations/${conversationId}/messages`, messageData);
     };
 
-    // Handles sending of text messages
     const onTextSubmit = async (values: z.infer<typeof messageSchema>) => {
-        const content = values.content.trim();
-        if (!content) return; // Don't send empty messages
+        // --- ADDED: Stop typing when message is sent ---
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+        sendWebSocketMessage('stop_typing', { conversationId, recipientId });
+        // --- END ADDITION ---
 
+        const content = values.content.trim();
+        if (!content) return;
         form.reset();
 
         try {
-            // --- MODIFICATION: Check if the content is a GIF link ---
             if (isGifUrl(content)) {
-                // If it is, send it as a media message
                 await sendMessage({ media_url: content, media_type: 'image/gif' });
             } else {
-                // Otherwise, send it as a normal text message
                 await sendMessage({ content: content });
             }
-            // --- END MODIFICATION ---
         } catch (error) {
             toast.error("Failed to send message.");
-            form.setValue('content', content); // Restore content on error
+            form.setValue('content', content);
         }
     };
 
-    // Handles file selection and upload
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
@@ -72,20 +87,48 @@ export function MessageInput({ conversationId }: MessageInputProps) {
         formData.append('file', file);
 
         try {
-            const response = await api.post('/uploads', formData);
-            const { url } = response.data; // Assumes your API returns { url: '...' }
-            await sendMessage({ media_url: url, media_type: file.type });
+            const response = await api.post('/uploads', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            
+            const { url } = response.data;
+            await sendMessage({ media_url: url, media_type: file.type.startsWith('image/') ? 'image' : 'other' });
+
         } catch (error) {
-            toast.error('File upload failed.');
+            toast.error('File upload failed. Please try again.');
         } finally {
             setIsUploading(false);
-            // Clear the file input value so the same file can be selected again
-            if(fileInputRef.current) fileInputRef.current.value = "";
+            if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
         }
     };
 
+    // --- ADDED: Handler for text input changes ---
+    const handleTyping = (event: React.ChangeEvent<HTMLInputElement>) => {
+        
+        // Send the start_typing event
+        sendWebSocketMessage('start_typing', { conversationId, recipientId });
+
+        // Clear any existing timeout
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        // Set a new timeout to send 'stop_typing' after 2 seconds
+        typingTimeoutRef.current = setTimeout(() => {
+            sendWebSocketMessage('stop_typing', { conversationId, recipientId });
+        }, 2000); // 2 seconds of inactivity
+        
+        // Manually update react-hook-form state
+        form.setValue('content', event.target.value);
+    };
+    // --- END ADDITION ---
+
     return (
+        
         <>
+            
             <input
                 type="file"
                 ref={fileInputRef}
@@ -105,7 +148,10 @@ export function MessageInput({ conversationId }: MessageInputProps) {
                 </Button>
 
                 <input 
-                    {...form.register('content')}
+                    // --- MODIFIED: Use value/onChange to capture typing ---
+                    value={form.watch('content')}
+                    onChange={handleTyping}
+                    // --- END MODIFICATION ---
                     type="text"
                     placeholder="Type your message..."
                     className={cn(
@@ -124,4 +170,3 @@ export function MessageInput({ conversationId }: MessageInputProps) {
         </>
     );
 }
-

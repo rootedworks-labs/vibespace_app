@@ -61,11 +61,13 @@ exports.getUserByUsername = async (req, res) => {
     const userQuery = `
       SELECT
         u.id, u.username, u.bio, u.website, u.profile_picture_url, u.created_at,
+        (SELECT COUNT(*) FROM posts where user_id = u.id) as post_count,
         (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) as following_count,
         (SELECT COUNT(*) FROM follows WHERE followee_id = u.id) as followers_count,
         EXISTS (SELECT 1 FROM follows WHERE follower_id = $2 AND followee_id = u.id) as is_following,
         
-        -- Calculate all vibe counts for the user's posts and aggregate into a JSON object
+        
+        
         (
           SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
           FROM (
@@ -80,6 +82,8 @@ exports.getUserByUsername = async (req, res) => {
       FROM users u
       WHERE u.username = $1
     `;
+    console.log(username);
+    console.log(currentUserId);
     const { rows } = await query(userQuery, [username, currentUserId]);
 
     if (rows.length === 0) {
@@ -135,19 +139,65 @@ exports.deleteCurrentUser = async (req, res) => {
 };
 
 exports.getCurrentUser = async (req, res) => {
-  const { userId } = req;
+  const currentUserId = req.userId || null;
   try {
-    const { rows } = await query(
-      'SELECT id, username, email, created_at, profile_picture_url FROM users WHERE id = $1',
-      [userId]
-    );
+    const userQuery = `
+      SELECT
+        u.id, u.username, u.bio, u.website, u.profile_picture_url, u.created_at,
+        (SELECT COUNT(*) FROM posts where user_id = u.id) as post_count,
+        (SELECT COUNT(*) FROM follows WHERE follower_id = u.id) as following_count,
+        (SELECT COUNT(*) FROM follows WHERE followee_id = u.id) as followers_count,
+        EXISTS (SELECT 1 FROM follows WHERE follower_id = $1 AND followee_id = u.id) as is_following,
+        
+        -- Calculate all vibe counts for the user's posts and aggregate into a JSON object
+        (
+          SELECT COALESCE(json_object_agg(v.vibe_type, v.count), '{}'::json)
+          FROM (
+            SELECT vibe_type, COUNT(*) as count
+            FROM vibes
+            JOIN posts ON vibes.post_id = posts.id
+            WHERE posts.user_id = u.id
+            GROUP BY vibe_type
+          ) v
+        ) as vibe_counts
+
+      FROM users u
+      WHERE u.id = $1
+    `;
+    const { rows } = await query(userQuery, [currentUserId]);
+
     if (rows.length === 0) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(404).json({ error: 'User not found' });
     }
-    res.json(rows[0]);
+
+    const user = rows[0];
+
+    // --- Calculate dominant_vibe from vibe_counts ---
+    const vibeCounts = user.vibe_counts;
+    let dominantVibe = null;
+    let maxCount = 0;
+    
+    if (vibeCounts && typeof vibeCounts === 'object' && Object.keys(vibeCounts).length > 0) {
+      const counts = Object.values(vibeCounts);
+      maxCount = Math.max(...counts);
+      
+      const topVibes = Object.keys(vibeCounts).filter(vibe => vibeCounts[vibe] === maxCount);
+      
+      // If there is only one vibe with the highest count, it's the dominant one.
+      // If there's a tie, dominantVibe remains null.
+      if (topVibes.length === 1) {
+        dominantVibe = topVibes[0];
+      }
+    }
+
+    // Add the calculated dominant_vibe to the user object
+    user.dominant_vibe = dominantVibe;
+
+    res.json(user);
+    
   } catch (err) {
-    console.error('Failed to get current user:', err);
-    res.status(500).json({ error: 'Server error.' });
+    console.error(`Failed to fetch user:`, err);
+    res.status(500).json({ error: 'Server error' });
   }
 };
 

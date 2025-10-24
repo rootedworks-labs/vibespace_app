@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from 'react'; // 1. Import useRef
+import { useEffect, useRef } from 'react';
 import useSWR from 'swr';
 import { Notification } from '@/lib/types';
-import { fetcher } from '@/src/app/api';
+import api, { fetcher } from '@/src/app/api'; // Make sure 'api' is imported
 import NotificationCard from '@/src/app/(main)/notifications/_components/NotificationCard';
 import { Spinner } from '@/src/app/components/ui/Spinner';
 import { useAuthStore } from '@/src/app/store/authStore';
@@ -14,45 +14,32 @@ export default function NotificationList() {
     accessToken ? '/notifications' : null,
     fetcher
   );
-
-  // 2. Use a ref to hold the socket instance. This is the key fix.
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     if (!accessToken) return;
 
-    // 3. Only connect if the socket doesn't already exist in the ref.
-    // This prevents the connect/disconnect cycle in React's Strict Mode.
     if (!socketRef.current) {
-      // Use the original URL format for your 'ws' library
       const wsUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000')
         .replace(/^http/, 'ws') + `/?token=${accessToken}`;
       
-      console.log(`Attempting to connect WebSocket to: ${wsUrl}`);
-      
-      socketRef.current = new WebSocket(wsUrl);
-      const ws = socketRef.current;
+      const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => console.log('WebSocket connected.');
-      
       ws.onclose = () => {
         console.log('WebSocket disconnected.');
-        socketRef.current = null; // Clear ref on close to allow reconnection on next render
+        socketRef.current = null;
       };
-
       ws.onerror = (err) => {
         console.error('WebSocket error:', err);
-        socketRef.current = null; // Clear ref on error
+        socketRef.current = null;
       };
-
       ws.onmessage = (event) => {
         console.log('New notification received:', event.data);
-        // Re-fetch the notification list to get the latest data
         mutate(); 
       };
     }
 
-    // 4. The cleanup function runs when the component unmounts.
     return () => {
       if (socketRef.current?.readyState === WebSocket.OPEN) {
         console.log('Cleaning up and closing WebSocket...');
@@ -60,6 +47,25 @@ export default function NotificationList() {
       }
     };
   }, [accessToken, mutate]);
+
+  // --- ADDED THIS USEEFFECT HOOK ---
+  useEffect(() => {
+    // Check if there are any unread notifications
+    if (notifications && notifications.some(n => !n.is_read)) {
+      // Use a short timeout to prevent marking as read instantly
+      const timer = setTimeout(() => {
+        api.patch('/notifications/read')
+          .then(() => {
+            // Optimistically update the UI without waiting for a re-fetch
+            mutate(notifications.map(n => ({ ...n, is_read: true })), false);
+          })
+          .catch(err => console.error('Failed to mark notifications as read:', err));
+      }, 1500); // 1.5 second delay
+
+      return () => clearTimeout(timer);
+    }
+  }, [notifications, mutate]);
+  // --- END OF ADDITION ---
 
   if (error) return <div className="text-center text-red-500">Failed to load notifications.</div>;
   if (!notifications) return (

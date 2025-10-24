@@ -11,6 +11,7 @@ import { Spinner } from '@/src/app/components/ui/Spinner';
 
 interface ApiConversation{
   id: number;
+  participant_id: number;
   participant_username: string;
   participant_avatar: string | null;
 }
@@ -23,7 +24,7 @@ export function MessagesLayout() {
   const conversations: Conversation[] | undefined = apiConversations?.map(convo => ({
     id: convo.id,
     user: {
-      id: convo.id.toString(), // Assuming participant ID is the same as conversation ID for now
+      id: convo.participant_id.toString(), // Assuming participant ID is the same as conversation ID for now
       username: convo.participant_username,
       profile_picture_url: convo.participant_avatar,
     },

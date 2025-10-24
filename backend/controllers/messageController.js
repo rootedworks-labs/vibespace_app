@@ -100,7 +100,8 @@ exports.getConversations = async (req, res) => {
     const userId = req.userId;
     try {
         const result = await query(
-            `SELECT c.id, 
+            `SELECT c.id,
+                    u.id as participant_id, 
                     u.username as participant_username, 
                     u.profile_picture_url as participant_avatar
              FROM conversations c
@@ -149,14 +150,40 @@ exports.getMessagesForConversation = async (req, res) => {
  */
 exports.markMessagesAsRead = async (req, res) => {
     const { conversationId } = req.params;
-    const userId = req.userId;
+    const readerId = req.userId; // The user who is reading the messages
 
     try {
+        // Find the other user in the conversation to notify them
+        const participantRes = await query(
+            'SELECT user_id FROM conversation_participants WHERE conversation_id = $1 AND user_id != $2',
+            [conversationId, readerId]
+        );
+        
+        // Don't proceed if there's no one else to notify
+        if (participantRes.rows.length === 0) {
+            return res.status(204).send();
+        }
+        const authorId = participantRes.rows[0].user_id;
+
+        // Update messages sent BY THE OTHER USER to mark them as read
         await query(
             `UPDATE messages SET read_at = NOW() 
-             WHERE conversation_id = $1 AND sender_id != $2 AND read_at IS NULL`,
-            [conversationId, userId]
+             WHERE conversation_id = $1 AND sender_id = $2 AND read_at IS NULL`,
+            [conversationId, authorId]
         );
+        
+        // --- ADD THIS WEBSOCKET LOGIC ---
+        // Emit a WebSocket event to the original sender (author) to let them know their messages were read
+        const readReceiptPayload = {
+            type: 'messages_read',
+            payload: {
+                conversation_id: parseInt(conversationId, 10),
+                reader_id: readerId
+            }
+        };
+        sendMessageToUser(authorId, readReceiptPayload);
+        // --- END OF WEBSOCKET LOGIC ---
+
         res.status(204).send();
     } catch (err) {
         console.error('Mark messages as read error:', err);

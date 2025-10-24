@@ -42,11 +42,34 @@ function initializeWebSocket(server) {
       onlineUsers.set(userId, ws);
       console.log(`WebSocket: User ${userId} connected.`);
 
+      ws.on('message', (message) => {
+        try {
+          const data = JSON.parse(message);
+          const recipientId = parseInt(data.payload.recipientId, 10);
+          // Find the recipient's socket connection
+          const recipientSocket = onlineUsers.get(recipientId);
+          console.log(recipientSocket);
+          if (recipientSocket && recipientSocket.readyState === 1) {
+
+            // Relay typing events without saving them
+            if (data.type === 'start_typing' || data.type === 'stop_typing') {
+              recipientSocket.send(JSON.stringify({
+                type: data.type,
+                payload: {
+                  conversation_id: data.payload.conversationId,
+                  sender_id: userId
+                }
+              }));
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse WebSocket message:', e);
+        }
+      });
       ws.on('close', () => {
         onlineUsers.delete(userId);
         console.log(`WebSocket: User ${userId} disconnected.`);
       });
-
     } catch (err) {
       ws.close(1008, 'Invalid token');
     }
