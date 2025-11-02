@@ -1,8 +1,8 @@
 import { Waves, Sun, Heart, Moon, Droplets, Flame, Sparkles, Smile } from 'lucide-react';
-import { Button } from '../ui/Button';
+import { Button } from '@/src/app/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { vibeConfig } from './vibe-config';
+import { vibeConfig } from '@/src/app/components/prototypes/vibe-config';
 
 // Define the available vibes with their corresponding icon and color
 

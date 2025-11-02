@@ -3,7 +3,7 @@
 
 import { cn } from '@/lib/utils';
 import React, { useState, useEffect, useRef } from 'react';
-import { vibeConfig } from './vibe-config';
+import { vibeConfig } from '@/src/app/components/prototypes/vibe-config';
 
 type VibeType = keyof typeof vibeConfig;
 

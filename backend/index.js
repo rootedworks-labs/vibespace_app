@@ -5,6 +5,8 @@ const cors = require('cors');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpecs = require('./swaggerdef'); // Correctly imports from our new file
 const { initializeWebSocket } = require('./services/websocket');
+const mediaRoutes = require('./routes/media');
+
 
 const app = express();
 
@@ -30,6 +32,8 @@ app.use('/api/reports', require('./routes/reports'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/data', require('./routes/data'));
 app.use('/api/vibes', require('./routes/vibes'));
+app.use('/api/media', require('./routes/media'));
+app.use('/api/follow-requests', require('./routes/follow-requests'));
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

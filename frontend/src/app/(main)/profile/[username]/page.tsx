@@ -38,7 +38,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="container mx-auto max-w-3xl py-8 px-4 space-y-8">
+    <div className="container mx-auto max-w-3xl py-8 px-1 space-y-8">
       {/* 5. Pass the fetched 'profileUser' to the header */}
       <ProfileHeader user={profileUser} />
       <UserPostFeed username={username} />

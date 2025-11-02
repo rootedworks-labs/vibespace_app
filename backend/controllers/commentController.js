@@ -1,6 +1,6 @@
 // In controllers/commentController.js
 const { query } = require('../db');
-
+const { extractFirstUrl, fetchLinkMetadata } = require('../services/linkPreviewService');
 /**
  * Creates a new comment on a specific post.
  */
@@ -16,6 +16,13 @@ exports.createComment = async (req, res) => {
       return res.status(404).json({ error: 'Post not found.' });
     }
     const postAuthorId = postResult.rows[0].user_id;
+
+    // --- 2. Add Link Preview Logic ---
+    let linkPreviewData = null;
+    const firstUrl = extractFirstUrl(content);
+    if (firstUrl) {
+      linkPreviewData = await fetchLinkMetadata(firstUrl);
+    }
 
     // Insert the new comment
     const newComment = await query(

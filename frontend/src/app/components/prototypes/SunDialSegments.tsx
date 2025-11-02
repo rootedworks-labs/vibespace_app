@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { motion, animate, useMotionValue, useTransform } from 'framer-motion';
 import { Sun, SunMedium, Moon } from 'lucide-react';
+// --- 1. IMPORT THE STORE (Corrected Path) ---
+import { useFeedStore, TimeWindow } from '../../store/feedStore';
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -14,11 +16,12 @@ const DEFAULT_SEGMENTS = [
   { key: 'evening', label: 'Evening', color: 'var(--color-brand-deep-blue)', textColor: '#FFFFFF' },
 ];
 
-type TimeWindow = 'Morning' | 'Afternoon' | 'Evening';
+// type TimeWindow = 'Morning' | 'Afternoon' | 'Evening'; // <-- Removed, now imported from store
 
 type Props = {
-  activeWindow: TimeWindow;
-  setActiveWindow: (window: TimeWindow) => void;
+  // --- 2. REMOVE PROPS ---
+  // activeWindow: TimeWindow;
+  // setActiveWindow: (window: TimeWindow) => void;
 
   outerRadius?: number;
   innerRadius?: number;
@@ -63,14 +66,18 @@ function annularSectorPath(cx: number, cy: number, rInner: number, rOuter: numbe
 }
 
 export function SunDialSegments({
-  activeWindow,
-  setActiveWindow,
+  // --- 3. REMOVE PROPS FROM DESTRUCTURING ---
+  // activeWindow,
+  // setActiveWindow,
   outerRadius = 150,
   innerRadius = 70,
   spreadDeg = 360,
   centerOffsetY = 0,
   className,
 }: Props) {
+  // --- 4. GET STATE AND ACTIONS FROM THE STORE ---
+  const { activeWindow, setActiveWindow } = useFeedStore();
+
   const segments = DEFAULT_SEGMENTS;
   const count = segments.length;
   const mid = 270;
@@ -78,16 +85,21 @@ export function SunDialSegments({
   const step = spreadDeg / count;
   const start0 = mid - spreadDeg / 2;
 
-  const angles = segments.map((s, i) => {
+  const angles = React.useMemo(() => segments.map((s, i) => {
     const a0 = start0 + i * step;
     const a1 = a0 + step;
     const midRaw = (a0 + a1) / 2;
     const midNorm = norm360(midRaw);
     return { key: s.key, start: a0, end: a1, midRaw, midNorm, index: i };
-  });
+  }), [segments, start0, step]); // segments is constant, but good practice
 
   const activeKey = activeWindow.toLowerCase() as 'morning' | 'afternoon' | 'evening';
-  const angleFor = (key: string) => angles.find(a => a.key === key)?.midNorm ?? 270;
+  
+  // Wrap angleFor in useCallback since it's a dependency of useEffect
+  const angleFor = React.useCallback(
+    (key: string) => angles.find(a => a.key === key)?.midNorm ?? 270,
+    [angles]
+  );
 
   const rotation = useMotionValue(270 - angleFor(activeKey));
 
@@ -103,7 +115,7 @@ export function SunDialSegments({
       mass: 1.2,
     });
     return () => controls.stop();
-  }, [activeKey]);
+  }, [activeKey, rotation, angleFor]); // Pass stable angleFor function
 
   const pad = 24;
   const R = outerRadius + pad;

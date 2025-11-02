@@ -3,10 +3,10 @@
 import useSWR from 'swr';
 import { fetcher } from '@/src/app/api';
 // 1. Import VibeCard and its related types
-import { VibeCard } from '@/src/app/components/prototypes/VibeCard';
+import { VibeCard } from '@/src/app/(main)/_components/VibeCard';
 import { VibeType } from '@/src/app/components/prototypes/vibe-config';
 // 2. Keep the Post type, as this is what your API returns
-import { Post } from '@/src/app/(main)/_components/PostCard'; 
+import { Post } from '@/lib/types'; 
 import { Spinner } from '@/src/app/components/ui/Spinner';
 import { PostCardSkeleton } from '@/src/app/(main)/_components/PostCardSkeleton';
 import { getTimeWindow } from '@/lib/utils';
@@ -41,7 +41,7 @@ export function VibeChannelFeed({ vibeType }: VibeChannelFeedProps) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col items-center space-y-4 py-4">
       {posts.length === 0 ? (
         <p className="text-center text-neutral-500 py-8">
           No vibes have been shared in this channel yet.
@@ -64,6 +64,7 @@ export function VibeChannelFeed({ vibeType }: VibeChannelFeedProps) {
             vibeCounts={post.vibe_counts} // Cast to VibeCounts
             userVibe={post.user_vibe}
             comment_count={post.comment_count}
+            created_at={post.created_at}
           />
         ))
       )}

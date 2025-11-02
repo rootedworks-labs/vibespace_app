@@ -5,12 +5,13 @@ const vibeController = require('../controllers/vibeController');
 const commentController = require('../controllers/commentController');
 const authMiddleware = require('../middleware/auth');
 const upload = require('../middleware/upload');
-const { createPostRules, createCommentRules, postIdRule, validate } = require('../middleware/validation');
+const { updatePostRules, createPostRules, createCommentRules, postIdRule, validate } = require('../middleware/validation');
 
 // --- Post Routes ---
 router.get('/', postController.getPosts);
 router.get('/:postId', postIdRule(), validate, postController.getPostById);
 router.post('/', authMiddleware.authenticate, upload.single('media'), createPostRules(), validate, postController.createPost);
+router.patch('/:postId', authMiddleware.authenticate, postIdRule(), updatePostRules(), validate, postController.updatePost);
 router.delete('/:postId', authMiddleware.authenticate, postIdRule(), validate, postController.deletePost);
 
 // --- Vibe Routes for Posts ---

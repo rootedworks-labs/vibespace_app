@@ -39,3 +39,25 @@ export const exportUserData = async () => {
   return response.data;
 };
 
+export const grantConsent = async (consentType: string): Promise<void> => {
+  await api.post('/consents', { consent_type: consentType });
+};
+
+/**
+ * Fetches the current user's privacy settings.
+ */
+export const getPrivacySettings = async () => {
+  const response = await api.get('/users/me/privacy');
+  return response.data;
+};
+
+/**
+ * Updates the current user's privacy settings.
+ */
+export const updatePrivacySettings = async (settings: {
+  account_privacy?: 'public' | 'private';
+  dm_privacy?: 'open' | 'mutuals';
+}) => {
+  const response = await api.patch('/users/me/privacy', settings);
+  return response.data;
+};

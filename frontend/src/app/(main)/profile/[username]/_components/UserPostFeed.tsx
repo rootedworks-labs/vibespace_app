@@ -2,8 +2,8 @@
 
 import useSWR from 'swr';
 import { fetcher } from '@/src/app/api';
-import { Post } from '@/src/app/(main)/_components/PostCard'; // Use the canonical Post type
-import { VibeCard } from '@/src/app/components/prototypes/VibeCard';
+import { Post } from '@/lib/types'; // Use the canonical Post type
+import { VibeCard } from '@/src/app/(main)/_components/VibeCard';
 import { PostCardSkeleton } from '@/src/app/(main)/_components/PostCardSkeleton';
 import { getTimeWindow } from '@/lib/utils';
 import { VibeType } from '@/src/app/components/prototypes/vibe-config';
@@ -41,25 +41,28 @@ export function UserPostFeed({ username }: UserPostFeedProps) {
   }
 
   return (
+    
     <div className="flex flex-col items-center space-y-4 py-4">
       {posts?.map((post) => (
-              <VibeCard 
-                key={post.id}
-                id={post.id}
-                user_id={post.user_id}
-                author={{ 
-                  name: post.username, 
-                  avatarUrl: post.profile_picture_url || undefined 
-                }}
-                text={post.content}
-                timeWindow={getTimeWindow(post.created_at)}
-                vibeCounts={post.vibe_counts as VibeCounts}
-                comment_count={post.comment_count}
-                // The VibeCard does not use userVibe, so we omit it.
-                // The card handles its own internal vibe state.
-                media_url={post.media_url || undefined}
-                media_type={post.media_type as 'image' | 'video' | undefined}
-              />
+        console.log(post.username),
+        <VibeCard 
+          key={post.id}
+          id={post.id}
+          user_id={post.user_id}
+          author={{ 
+            name: post.username, 
+            avatarUrl: post.profile_picture_url || undefined 
+          }}
+          text={post.content}
+          timeWindow={getTimeWindow(post.created_at)}
+          vibeCounts={post.vibe_counts as VibeCounts}
+          comment_count={post.comment_count}
+          // The VibeCard does not use userVibe, so we omit it.
+          // The card handles its own internal vibe state.
+          media_url={post.media_url || undefined}
+          media_type={post.media_type as 'image' | 'video' | undefined}
+          created_at={post.created_at}
+        />
             ))}
     </div>
   );

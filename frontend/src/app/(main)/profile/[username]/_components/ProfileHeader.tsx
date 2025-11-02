@@ -8,7 +8,7 @@ import { ProfileAura } from '@/src/app/components/prototypes/ProfileAura'; // Us
 import { VibeType } from '@/src/app/components/prototypes/vibe-config';
 import { FollowButton } from '@/src/app/components/FollowButton';
 import { EditProfileModal } from './EditProfileModal';
-
+import Link from 'next/link';
 // This defines the complete user profile data the header now expects.
 export interface UserProfile {
   id: number;
@@ -19,7 +19,8 @@ export interface UserProfile {
   followers_count: number;
   following_count: number;
   dominant_vibe: VibeType | null;
-  is_following: boolean;
+  is_following?: boolean;
+  is_following_viewer?: boolean;
 }
 
 interface ProfileHeaderProps {
@@ -55,14 +56,18 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
           <p className="text-2xl font-bold text-brand-deep-blue">{user.post_count}</p>
           <p className="text-sm text-neutral-500">Posts</p>
         </div>
-        <div>
-          <p className="text-2xl font-bold text-brand-deep-blue">{user.followers_count}</p>
-          <p className="text-sm text-neutral-500">Followers</p>
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-brand-deep-blue">{user.following_count}</p>
-          <p className="text-sm text-neutral-500">Following</p>
-        </div>
+        <Link href={`/profile/${user.username}/followers`} className="hover:opacity-80 transition-opacity">
+          <div>
+            <p className="text-2xl font-bold text-brand-deep-blue">{user.followers_count}</p>
+            <p className="text-sm text-neutral-500">Followers</p>
+          </div>
+        </Link>
+        <Link href={`/profile/${user.username}/following`} className="hover:opacity-80 transition-opacity">
+          <div>
+            <p className="text-2xl font-bold text-brand-deep-blue">{user.following_count}</p>
+            <p className="text-sm text-neutral-500">Following</p>
+          </div>
+        </Link>
       </div>
       
       {isCurrentUser ? (
@@ -73,7 +78,7 @@ export function ProfileHeader({ user }: ProfileHeaderProps) {
           // Otherwise, render the FollowButton
           <FollowButton 
             username={user.username} 
-            isFollowing={user.is_following} 
+            isFollowing={user.is_following ?? false} 
           />
         )}
     </div>

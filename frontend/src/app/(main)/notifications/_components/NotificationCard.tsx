@@ -52,7 +52,7 @@ const NotificationCard = ({ notification }: { notification: Notification }) => {
   return (
     <Link href={getNotificationLink(notification)}>
       <Card className={cn(
-        "p-4 flex items-center space-x-4 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800",
+        "p-4 flex items-center space-x-4 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800 min-h-25",
         !notification.is_read && "bg-brand-sand/30 dark:bg-brand-sand/10"
       )}>
         <Avatar>

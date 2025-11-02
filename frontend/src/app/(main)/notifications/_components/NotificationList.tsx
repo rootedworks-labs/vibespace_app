@@ -80,7 +80,7 @@ export default function NotificationList() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col space-y-4 py-4">
       {notifications.length === 0 ? (
         <div className="text-center text-neutral-500 p-4">You have no notifications yet.</div>
       ) : (

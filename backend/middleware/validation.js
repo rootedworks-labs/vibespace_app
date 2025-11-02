@@ -176,8 +176,8 @@ const sendMessageRules = () => {
         body('content')
             .optional()
             .isString()
-            .trim()
-            .escape(),
+            .trim(),
+            //.escape(),
 
         // Media URL is optional, but if it exists, it must be a valid URL.
         body('media_url')
@@ -308,6 +308,10 @@ const suspendUserRules = () => {
     ];
 };
 
+const updatePostRules = () => [
+    body('content', 'Content cannot be empty').notEmpty().isString().trim()
+];
+
 
 module.exports = {
   registerRules,
@@ -332,6 +336,7 @@ module.exports = {
   reportIdRule,
   userIdRule,
   updateReportStatusRules,
-  suspendUserRules
+  suspendUserRules,
+  updatePostRules
 };
 

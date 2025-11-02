@@ -3,8 +3,8 @@
 import useSWR from 'swr';
 import { useParams } from 'next/navigation';
 import { fetcher } from '@/src/app/api';
-import { Post } from '@/src/app/(main)/_components/PostCard'; // Use the canonical Post type
-import { VibeCard } from '@/src/app/components/prototypes/VibeCard';
+import {Post} from '@/lib/types'
+import { VibeCard } from '@/src/app/(main)/_components/VibeCard';
 import { PostCardSkeleton } from '@/src/app/(main)/_components/PostCardSkeleton';
 import { getTimeWindow } from '@/lib/utils';
 import { VibeType } from '@/src/app/components/prototypes/vibe-config';
@@ -51,6 +51,7 @@ export default function SinglePostPage() {
             comment_count={post.comment_count}
             media_url={post.media_url || undefined}
             media_type={post.media_type as 'image' | 'video' | undefined}
+            created_at={post.created_at}
           />
           <div className="w-full border-t pt-8">
             <h2 className="text-2xl font-bold font-heading mb-4">Vibes & Replies</h2>

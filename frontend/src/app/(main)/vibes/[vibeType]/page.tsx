@@ -16,7 +16,7 @@ export default function VibeChannelPage() {
   const Icon = currentVibe?.icon;
 
   return (
-    <div className="container mx-auto max-w-2xl py-8 px-4">
+    <div className="container mx-auto max-w-2xl py-8 px-1">
         <div className="mb-6">
             <Link href="/feed" className="inline-flex items-center gap-2 text-sm font-bold text-neutral-500 hover:text-brand-deep-blue transition-colors">
                 <ArrowLeft className="h-4 w-4" />

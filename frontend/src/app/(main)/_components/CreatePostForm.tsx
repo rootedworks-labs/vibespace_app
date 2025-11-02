@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useAuthStore } from '@/src/app/store/authStore';
-import api from '@/src/app/api';
+import api, { grantConsent} from '@/src/app/api';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/src/app/components/ui/Avatar';
@@ -13,6 +13,8 @@ import { VibeChannelSelector } from './VibeChannelSelector';
 import { VibeType } from '@/src/app/components/prototypes/vibe-config';
 import { Paperclip, X } from 'lucide-react';
 import Image from 'next/image'; // Use Next.js Image for preview
+import { ConsentModal } from '../../components/ConsentModal';
+import useSWR, { useSWRConfig } from 'swr';
 
 interface CreatePostFormProps {
   onSuccess?: () => void;
@@ -25,14 +27,23 @@ export function CreatePostForm({ onSuccess }: CreatePostFormProps) {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [vibeChannelTag, setVibeChannelTag] = useState<VibeType | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { mutate } = useSWRConfig();
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [requiredConsentType, setRequiredConsentType] = useState<string | null>(null);
+  const [pendingFormData, setPendingFormData] = useState<FormData | null>(null);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       setMediaFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () =>{
       setMediaPreview(URL.createObjectURL(file));
+      }
+      reader.readAsDataURL(file);
     }
   };
 
@@ -44,50 +55,94 @@ export function CreatePostForm({ onSuccess }: CreatePostFormProps) {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!content && !mediaFile) {
-      toast.error("Your post can't be empty.");
+const handleSubmit = async (event?: React.MouseEvent<HTMLButtonElement>) => {
+    // Prevent default form submission if triggered by button click inside a form
+     if (event) event.preventDefault();
+
+    if (!content.trim() && !mediaFile) {
+      toast.error('Post cannot be empty.');
       return;
     }
+    if (isSubmitting) return;
 
     setIsSubmitting(true);
-    let mediaUrl = null;
-    let mediaType = null;
+    toast.loading('Creating post...');
 
-    // 1. Upload media if it exists
+    const formData = new FormData();
+    formData.append('content', content);
     if (mediaFile) {
-      try {
-        const formData = new FormData();
-        formData.append('file', mediaFile);
-        const response = await api.post('/uploads', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        mediaUrl = response.data.url;
-        mediaType = mediaFile.type.startsWith('image/') ? 'image' : 'video';
-      } catch (error) {
-        toast.error('Failed to upload media. Please try again.');
-        setIsSubmitting(false);
-        return;
-      }
+      formData.append('media', mediaFile);
+    }
+    if (vibeChannelTag) {
+      formData.append('vibe_channel_tag', vibeChannelTag);
     }
 
-    // 2. Create the post
     try {
-      await api.post('/posts', {
-        content: content,
-        media_url: mediaUrl,
-        media_type: mediaType,
-        vibe_channel_tag: vibeChannelTag,
+      await api.post('/posts', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      
-      toast.success('Vibe posted!');
-      if (onSuccess) {
-        onSuccess();
+
+      setContent('');
+      removeMedia();
+      setVibeChannelTag(null);
+      toast.dismiss();
+      toast.success('Post created!');
+      mutate('/feed'); // Revalidate feed data
+      if (onSuccess) onSuccess();
+
+    } catch (error: any) {
+      toast.dismiss();
+      console.error('Post creation error:', error);
+
+      // Check for the specific consent error structure
+      if (error?.error === "Consent required for this action" && error?.required_consent) {
+        setRequiredConsentType(error.required_consent);
+        setPendingFormData(formData); // Store the data for retry
+        setShowConsentModal(true);
+      } else {
+        const message = error?.error || 'Failed to create post. Please try again.';
+        toast.error(message);
       }
-    } catch (error) {
-      toast.error('Failed to create post. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // --- CHANGE 5: Add handler for when consent is granted ---
+  const handleConsentGranted = async () => {
+    if (!requiredConsentType || !pendingFormData) return;
+
+    try {
+      setShowConsentModal(false); // Close modal immediately
+      await grantConsent(requiredConsentType);
+      setRequiredConsentType(null);
+
+      // Retry the submission
+      toast.loading('Retrying post creation...');
+      setIsSubmitting(true); // Re-set submitting state
+
+      await api.post('/posts', pendingFormData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      setContent('');
+      removeMedia();
+      setVibeChannelTag(null);
+      toast.dismiss();
+      toast.success('Post created!');
+      mutate('/feed');
+      if (onSuccess) onSuccess();
+
+    } catch (retryError: any) {
+      toast.dismiss();
+      console.error('Retry post creation error:', retryError);
+      const message = retryError?.error || 'Failed to create post after granting consent.';
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+      setPendingFormData(null); // Clear pending data
     }
   };
 

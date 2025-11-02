@@ -3,6 +3,9 @@ import { Message } from '@/lib/types';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { CheckCheck } from 'lucide-react'; // 1. Import an icon for the read receipt
+import { LinkPreviewCard } from '@/src/app/components/LinkPreviewCard';
+import { LinkPreview } from '@/lib/types';
+
 
 interface MessageBubbleProps {
     message: Message;
@@ -70,6 +73,14 @@ export function MessageBubble({ message, currentUserId }: MessageBubbleProps) {
 
         {/* This part remains unchanged */}
         <p className="break-words">{message.content}</p>
+
+        {/* --- 7. Render LinkPreviewCard --- */}
+        {/* Show preview if NO media and data exists */}
+        {!message.media_url && message.link_preview_data && (
+          <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+            <LinkPreviewCard data={message.link_preview_data as LinkPreview} />
+          </div>
+        )}
 
         {/* --- 2. ADDED THE READ INDICATOR LOGIC HERE --- */}
         <div className="flex items-center justify-end text-xs mt-2">

@@ -11,21 +11,16 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      minio:
-        condition: service_started
-      minio-client:
-        condition: service_completed_successfully
     networks:
       - vibespace_net
 
-  # 2. The PostgreSQL Database Service
+  # 2. The PostgreSQL Database Service (Unchanged)
   db:
     image: postgres:14-alpine
     container_name: vibespace_db
     restart: unless-stopped
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # --- ADDED THIS LINE ---
       - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
     environment:
       POSTGRES_USER: ${PG_USER}
@@ -41,47 +36,9 @@ services:
     networks:
       - vibespace_net
 
-  # 3. The MinIO S3-Compatible Storage Service
-  minio:
-    image: minio/minio
-    container_name: vibespace_minio
-    restart: unless-stopped
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY}
-    command: server /data --console-address ":9001"
-    networks:
-      - vibespace_net
+  # --- REMOVED 'minio' SERVICE ---
 
-  # 4. MinIO Client to automatically create the bucket
-  minio-client:
-    image: minio/mc
-    container_name: minio_client
-    restart: on-failure
-    depends_on:
-      minio:
-        condition: service_started
-    volumes:
-      - ./init-minio.sh:/init-minio.sh
-    env_file:
-      - .env
-    networks:
-      - vibespace_net
-    entrypoint: >
-      /bin/sh -c "
-      sleep 5;
-      mc alias set local http://minio:9000 ${S3_ACCESS_KEY} ${S3_SECRET_KEY};
-      mc mb local/${S3_BUCKET} --ignore-existing;
-      mc policy set download local/${S3_BUCKET};
-      echo 'MinIO is ready!';
-      tail -f /dev/null
-      "
-    # entrypoint: ["/bin/sh", "/init-minio.sh"]
+  # --- REMOVED 'minio-client' SERVICE ---
 
 networks:
   vibespace_net:
@@ -89,4 +46,5 @@ networks:
 
 volumes:
   postgres_data:
-  minio_data:
+  # --- REPLACED minio_data with localstack_data ---
+  localstack_data:

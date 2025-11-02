@@ -1,21 +1,22 @@
 'use client';
 
 import useSWR from 'swr';
+import { useFeedStore } from '@/src/app/store/feedStore';
 import { fetcher } from '@/src/app/api';
-import { Post } from './PostCard'; 
-import { VibeCard } from '@/src/app/components/prototypes/VibeCard';
+import { Post } from '@/lib/types'; 
+import { VibeCard } from './VibeCard';
 import { PostCardSkeleton } from './PostCardSkeleton';
 import { Users } from 'lucide-react';
 import { getTimeWindow } from '@/lib/utils';
 import { VibeType } from '@/src/app/components/prototypes/vibe-config';
 
-type TimeWindow = 'Morning' | 'Afternoon' | 'Evening';
-
 // Define a more specific type for VibeCounts to match VibeCardProps
 type VibeCounts = Partial<Record<VibeType, number>>;
 
-export function PostFeed({ timeWindow }: { timeWindow: TimeWindow }) {
-  const { data: posts, error, isLoading } = useSWR<Post[]>(`/feed?time_window=${timeWindow.toLowerCase()}`, fetcher);
+export function PostFeed() {
+  const activeWindow = useFeedStore((state) => state.activeWindow);
+  const { data: posts, error, isLoading } = useSWR<Post[]>(`/feed?time_window=${activeWindow.toLowerCase()}`, fetcher);
+
 
   if (isLoading) {
     return (
@@ -56,10 +57,12 @@ export function PostFeed({ timeWindow }: { timeWindow: TimeWindow }) {
           timeWindow={getTimeWindow(post.created_at)}
           vibeCounts={post.vibe_counts as VibeCounts}
           comment_count={post.comment_count}
+          created_at={post.created_at}
           // The VibeCard does not use userVibe, so we omit it.
           // The card handles its own internal vibe state.
           media_url={post.media_url || undefined}
           media_type={post.media_type as 'image' | 'video' | undefined}
+          link_preview_data={ post.link_preview_data || null}
         />
       ))}
     </div>

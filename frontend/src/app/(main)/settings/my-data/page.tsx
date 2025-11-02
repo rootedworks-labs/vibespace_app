@@ -6,7 +6,7 @@ import { Accordion, AccordionItem } from '@/src/app/components/ui/Accordian';
 import { PostCard } from '@/src/app/(main)/_components/PostCard';
 import { UserCard } from '@/src/app/components/UserCard';
 import { Spinner } from '@/src/app/components/ui/Spinner';
-import { Post } from '@/src/app/(main)/_components/PostCard';
+import { Post } from '@/lib/types';
 import { Card } from '@/src/app/components/ui/Card';
 import { Heart } from 'lucide-react';
 import { cn } from '@/lib/utils'; // Import cn utility

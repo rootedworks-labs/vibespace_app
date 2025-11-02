@@ -40,12 +40,19 @@ const nextConfig: NextConfig = {
         hostname: 'cdn.jsdelivr.net',
       },
       // For your local MinIO/S3 instance
-      {
-        protocol: 'http',
-        hostname: 'localhost',
-        port: '9000',
-      },
+      
     ],
+  },
+
+  async rewrites() {
+    return [
+      {
+        // Source path: Any request starting with /api/
+        source: '/api/:path*', 
+        // Destination: Forward it to your backend server
+        destination: 'http://localhost:5000/api/:path*', // Adjust port if needed
+      },
+    ];
   },
   // --- END ADD ---
 };

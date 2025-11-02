@@ -96,6 +96,24 @@ router.get('/:username/posts', postController.getPostsByUsername);
 // --- Routes for the Current User (/me) ---
 router.get('/me', authMiddleware.authenticate, userController.getCurrentUser);
 
+// GET /api/users/:username/following
+router.get(
+  '/:username/following',
+  authMiddleware.authenticate, // Optional auth to check follow status
+  usernameRule(),
+  validate,
+  followController.getFollowing // <-- 2. Add route for getFollowing
+);
+
+// GET /api/users/:username/followers
+router.get(
+  '/:username/followers',
+  authMiddleware.authenticate, // Optional auth
+  usernameRule(),
+  validate,
+  followController.getFollowers // <-- 3. Add route for getFollowers
+);
+
 
 
 // TODO: This route is causing a crash because `userController.getUsers` is not a function.
