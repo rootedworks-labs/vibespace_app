@@ -273,7 +273,9 @@ exports.getPostsForCurrentUser = async (req, res) => {
    */
   exports.getPostsByUsername = async (req, res) => {
   const { username } = req.params;
-  const currentUserId = req.userId || null;
+  const currentUserId = req.user_id || null;
+  console.log(username);
+  console.log(currentUserId);
 
   try {
     // --- 1. Check user privacy first ---
@@ -283,6 +285,7 @@ exports.getPostsForCurrentUser = async (req, res) => {
     }
 
     const targetUser = userResult.rows[0];
+    //console.log(targetUser.id);
     const targetUserId = targetUser.id;
     let isAuthorized = false;
 
@@ -292,10 +295,14 @@ exports.getPostsForCurrentUser = async (req, res) => {
       isAuthorized = true; // User is viewing their own private profile
     } else if (currentUserId) {
       // Check if the viewer is an approved follower
+      //console.log("Target User ID: " + targetUser.id);
+
+      //console.log("Current User ID: " + currentUserId);
       const followStatus = await query(
         "SELECT 1 FROM follows WHERE follower_id = $1 AND followee_id = $2 AND status = 'approved'",
         [currentUserId, targetUserId]
       );
+      //console.log(followStatus.rowCount);
       if (followStatus.rowCount > 0) {
         isAuthorized = true;
       }

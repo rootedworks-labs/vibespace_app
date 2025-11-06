@@ -61,3 +61,24 @@ export const updatePrivacySettings = async (settings: {
   const response = await api.patch('/users/me/privacy', settings);
   return response.data;
 };
+
+export const getFollowRequests = async () => {
+  const response = await api.get('/follow-requests');
+  return response.data;
+};
+
+/**
+ * Approves a follow request from a specific user.
+ */
+export const approveFollowRequest = async (followerId: number) => {
+  const response = await api.post('/follow-requests/approve', { followerId });
+  return response.data;
+};
+
+/**
+ * Denies or ignores a follow request from a specific user.
+ */
+export const denyFollowRequest = async (followerId: number) => {
+  const response = await api.post('/follow-requests/deny', { followerId });
+  return response.data;
+};

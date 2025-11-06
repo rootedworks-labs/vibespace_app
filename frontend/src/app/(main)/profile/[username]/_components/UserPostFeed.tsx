@@ -7,6 +7,8 @@ import { VibeCard } from '@/src/app/(main)/_components/VibeCard';
 import { PostCardSkeleton } from '@/src/app/(main)/_components/PostCardSkeleton';
 import { getTimeWindow } from '@/lib/utils';
 import { VibeType } from '@/src/app/components/prototypes/vibe-config';
+import { useAuthStore } from '@/src/app/store/authStore';
+import { shallow } from 'zustand/shallow';
 
 // Define VibeCounts to match the VibeCard's expected props
 type VibeCounts = Partial<Record<VibeType, number>>;
@@ -16,9 +18,28 @@ interface UserPostFeedProps {
 }
 
 export function UserPostFeed({ username }: UserPostFeedProps) {
-  const { data: posts, error, isLoading } = useSWR<Post[]>(`/users/${username}/posts`, fetcher);
+  // 1. Get the 'accessToken' directly from the store.
+  // We'll also still use 'isCheckingAuth' to prevent a flash of the "no posts" message
+  // before hydration has a chance to run.
+  const { accessToken, isCheckingAuth } = useAuthStore((state) => ({
+    accessToken: state.accessToken,
+    isCheckingAuth: state.isChecking,
+  }));
 
-  if (isLoading) {
+  // 2. Make the SWR key conditional on 'accessToken' existing (or being null).
+  // SWR will use the accessToken value as part of its key.
+  // It will NOT fetch if the key is `null`.
+  // When 'accessToken' loads (from null to "your-token"), SWR will automatically refetch.
+  // This guarantees the interceptor will have the token.
+  const { data: posts, error, isLoading } = useSWR<Post[]>(
+    // The key is now an array. SWR will pass only the URL part to the fetcher.
+    // If accessToken is null (during hydration or if logged out), the key is null, and no fetch occurs.
+    accessToken ? [`/users/${username}/posts`, accessToken] : null,
+    ([url]) => fetcher(url) // SWR fetcher will only receive the URL
+  );
+
+  // 3. Show loading skeleton if SWR is loading OR if auth is still checking
+  if (isLoading || isCheckingAuth) {
     return (
       <div className="flex flex-col items-center space-y-4 py-4">
         <PostCardSkeleton />
@@ -62,6 +83,8 @@ export function UserPostFeed({ username }: UserPostFeedProps) {
           media_url={post.media_url || undefined}
           media_type={post.media_type as 'image' | 'video' | undefined}
           created_at={post.created_at}
+          link_preview_data={post.link_preview_data}
+          
         />
             ))}
     </div>

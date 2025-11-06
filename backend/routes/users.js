@@ -114,6 +114,19 @@ router.get(
   followController.getFollowers // <-- 3. Add route for getFollowers
 );
 
+router.get(
+  '/me/privacy',
+  authMiddleware.authenticate,
+  userController.getPrivacySettings
+);
+
+router.patch(
+  '/me/privacy',
+  authMiddleware.authenticate,
+  // Add validation rules here later if you want
+  userController.updatePrivacySettings
+);
+
 
 
 // TODO: This route is causing a crash because `userController.getUsers` is not a function.

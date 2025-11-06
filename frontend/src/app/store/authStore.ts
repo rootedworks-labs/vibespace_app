@@ -10,23 +10,33 @@ interface User {
 interface AuthState {
   accessToken: string | null;
   user: User | null;
-  isAuthenticated: () => boolean; // Add this line
+  isChecking: boolean; 
+  isAuthenticated: () => boolean;
   login: (accessToken: string, user: User) => void;
   logout: () => void;
 }
 
-export const useAuthStore = create(
-  persist<AuthState>(
-    (set, get) => ({ // Add 'get'
+// --- UPDATED 'create' SYNTAX ---
+// By adding <AuthState>() before persist, we explicitly type the store
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
       accessToken: null,
       user: null,
-      isAuthenticated: () => !!get().accessToken, // Implement the function
-      login: (accessToken, user) => set({ accessToken, user }),
-      logout: () => set({ accessToken: null, user: null }),
+      isChecking: true, // Default to true (checking on load)
+      isAuthenticated: () => !!get().accessToken,
+      login: (accessToken, user) => set({ accessToken, user, isChecking: false }),
+      logout: () => set({ accessToken: null, user: null, isChecking: false }), 
     }),
     {
       name: 'vibespace-auth-storage',
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isChecking = false;
+        }
+      },
     }
   )
 );
+

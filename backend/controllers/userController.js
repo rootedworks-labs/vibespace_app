@@ -82,8 +82,8 @@ exports.getUserByUsername = async (req, res) => {
       FROM users u
       WHERE u.username = $1
     `;
-    console.log(username);
-    console.log(currentUserId);
+    //console.log(username);
+    //console.log(currentUserId);
     const { rows } = await query(userQuery, [username, currentUserId]);
 
     if (rows.length === 0) {
@@ -329,5 +329,78 @@ exports.exportUserData = async (req, res) => {
   } catch (err) {
     console.error(`Failed to export data for user ${userId}:`, err);
     res.status(500).json({ error: 'Failed to export user data.' });
+  }
+};
+
+exports.getPrivacySettings = async (req, res) => {
+  const { userId } = req;
+
+  try {
+    const { rows } = await query(
+      'SELECT account_privacy, dm_privacy FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (err) {
+    console.error('Get privacy settings error:', err);
+    res.status(500).json({ error: 'Server error while fetching privacy settings.' });
+  }
+};
+
+exports.updatePrivacySettings = async (req, res) => {
+  const { userId } = req;
+  const { account_privacy, dm_privacy } = req.body;
+
+  // Validate inputs
+  if (account_privacy && !['public', 'private'].includes(account_privacy)) {
+    return res.status(400).json({ error: "Invalid 'account_privacy' value. Must be 'public' or 'private'." });
+  }
+  if (dm_privacy && !['open', 'mutuals'].includes(dm_privacy)) {
+    return res.status(400).json({ error: "Invalid 'dm_privacy' value. Must be 'open' or 'mutuals'." });
+  }
+
+  try {
+    // Build the update query dynamically based on provided fields
+    const fieldsToUpdate = [];
+    const values = [];
+    let queryIndex = 1;
+
+    if (account_privacy) {
+      fieldsToUpdate.push(`account_privacy = $${queryIndex++}`);
+      values.push(account_privacy);
+    }
+    if (dm_privacy) {
+      fieldsToUpdate.push(`dm_privacy = $${queryIndex++}`);
+      values.push(dm_privacy);
+    }
+
+    if (fieldsToUpdate.length === 0) {
+      return res.status(400).json({ error: 'No valid privacy settings provided to update.' });
+    }
+
+    // Add userId to values array for the WHERE clause
+    values.push(userId);
+    const updateQuery = `
+      UPDATE users
+      SET ${fieldsToUpdate.join(', ')}
+      WHERE id = $${queryIndex}
+      RETURNING id, account_privacy, dm_privacy;
+    `;
+
+    const { rows } = await query(updateQuery, values);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+
+    res.status(200).json(rows[0]);
+  } catch (err) {
+    console.error('Update privacy settings error:', err);
+    res.status(500).json({ error: 'Server error while updating privacy settings.' });
   }
 };

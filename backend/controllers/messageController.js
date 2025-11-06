@@ -76,7 +76,7 @@ exports.createConversation = async (req, res) => {
 /**
  * Creates a new message in a specific conversation.
  */
-exports.createMessage = async (req, res) => {
+exports.sendMessage = async (req, res) => {
     const senderId = req.userId;
     const { conversationId, content, mediaUrl, mediaType } = req.body;
 
@@ -186,7 +186,7 @@ exports.getConversations = async (req, res) => {
 /**
  * Retrieves all messages for a specific conversation.
  */
-exports.getMessages = async (req, res) => {
+exports.getMessagesForConversation = async (req, res) => {
     const userId = req.userId;
     const { conversationId } = req.params;
 
@@ -220,6 +220,39 @@ exports.getMessages = async (req, res) => {
         res.status(500).json({ error: 'Server error while fetching messages.' });
     }
 };
+
+// --- ADDED THIS FUNCTION BACK ---
+/**
+ * Marks all messages in a conversation as read for the authenticated user.
+ */
+exports.markMessagesAsRead = async (req, res) => {
+    const userId = req.userId;
+    const { conversationId } = req.params;
+
+    try {
+         // Verify user is a participant
+         const participantCheck = await query(
+            'SELECT 1 FROM conversation_participants WHERE conversation_id = $1 AND user_id = $2',
+            [conversationId, userId]
+        );
+
+        if (participantCheck.rowCount === 0) {
+            return res.status(403).json({ error: 'You are not a participant of this conversation.' });
+        }
+        
+        // Mark messages as read
+        await query(
+            'UPDATE messages SET read_at = NOW() WHERE conversation_id = $1 AND sender_id != $2 AND read_at IS NULL',
+            [conversationId, userId]
+        );
+
+        res.status(200).json({ message: 'Messages marked as read.' });
+    } catch (err) {
+        console.error('Mark messages as read error:', err);
+        res.status(500).json({ error: 'Server error.' });
+    }
+};
+// --- END OF ADDED FUNCTION ---
 
 /**
  * Adds or updates a vibe for a specific message.
@@ -265,3 +298,4 @@ exports.removeVibeFromMessage = async (req, res) => {
         res.status(500).json({ error: 'Server error.' });
     }
 };
+

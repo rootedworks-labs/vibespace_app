@@ -21,6 +21,7 @@ export interface UserProfile {
   dominant_vibe: VibeType | null;
   is_following?: boolean;
   is_following_viewer?: boolean;
+  account_privacy: 'public' | 'private';
 }
 
 interface ProfileHeaderProps {

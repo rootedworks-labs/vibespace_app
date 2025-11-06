@@ -33,7 +33,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/data', require('./routes/data'));
 app.use('/api/vibes', require('./routes/vibes'));
 app.use('/api/media', require('./routes/media'));
-app.use('/api/follow-requests', require('./routes/follow-requests'));
+app.use('/api/follow-requests', require('./routes/followRequests'));
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
